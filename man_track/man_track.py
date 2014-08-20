@@ -43,11 +43,11 @@ class Tracker_Thread(threading.Thread):
         #time.sleep(0.25)
 
     
-    def Write_Message(self, az, el):
+    def Write_Message_NEW(self, az, el):
         az_str = str(int(az))
         el_str = str(int(el))
 
-	    if len(az_str) == 1:
+        if len(az_str) == 1:
             az_str = "00" + az_str
         elif len(az_str) == 2:
             az_str = "0" + az_str
@@ -59,7 +59,10 @@ class Tracker_Thread(threading.Thread):
 
         msg = "W" + az_str + " " + el_str
         print msg
-        #
+        #self.sock.send(msg)
+
+    def Write_Message(self, cmd):
+        self.sock.send(cmd)
 
     def stop(self):
         self._stop.set()
@@ -150,9 +153,19 @@ if __name__ == '__main__':
     #dt = Display_Thread(options, pt)
     tt.daemon = True
     #dt.daemon = True
-    tt.run()
+    tt.start()
+    stop_flag = False
+    while not stop_flag:
+        os.system("clear")
+        command = raw_input("Enter WAAA EEE or (q)uit: ")
+        if command == 'q':
+            stop_flag = True
+            print "terminating, please wait..."
+        else:
+            tt.Write_Message(command)
+        
     #dt.run()
-    print "terminating, please wait..."
+    #print "terminating, please wait..."
     #tt.stop()
     #dt.stop()
     #pt.join()
