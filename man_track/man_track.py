@@ -38,12 +38,29 @@ class Tracker_Thread(threading.Thread):
                 self.az_tol     = float(data_list[5])   #Azimuth Tolerance
                 self.el_tol     = float(data_list[6])   #Elevation Tolerance
                 self.status     = data_list[7].strip('\r')        #Antenna Pedestal Status
-            print self.cmd_az, self.cmd_el, self.current_az, self.current_el, self.az_tol, self.el_tol, self.status
+            #print self.cmd_az, self.cmd_el, self.current_az, self.current_el, self.az_tol, self.el_tol, self.status
         sys.exit()
         #time.sleep(0.25)
 
     
-    
+    def Write_Message(self, az, el):
+        az_str = str(int(az))
+        el_str = str(int(el))
+
+	    if len(az_str) == 1:
+            az_str = "00" + az_str
+        elif len(az_str) == 2:
+            az_str = "0" + az_str
+        
+        if len(el_str) == 1:
+            el_str = "00" + el_str
+        elif len(el_str) == 2:
+            el_str = "0" + el_str
+
+        msg = "W" + az_str + " " + el_str
+        print msg
+        #
+
     def stop(self):
         self._stop.set()
 
