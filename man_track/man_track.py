@@ -40,7 +40,7 @@ class Tracker_Thread(threading.Thread):
                 self.status     = data_list[7].strip('\r')        #Antenna Pedestal Status
             print self.cmd_az, self.cmd_el, self.current_az, self.current_el, self.az_tol, self.el_tol, self.status
         sys.exit()
-            #time.sleep(0.25)
+        #time.sleep(0.25)
 
     
     
