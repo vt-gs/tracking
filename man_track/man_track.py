@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage = usage)
     s_help = "IP address of tracker, Default: 127.0.0.1"
     p_help = "TCP port number of tracker, Default: 196"
-    parser.add_option("-a", dest = "ip"  , action = "store", type = "string", default = "127.0.0.1", help = s_help)
+    parser.add_option("-a", dest = "ip"  , action = "store", type = "string", default = "192.168.20.3", help = s_help)
     parser.add_option("-p", dest = "port", action = "store", type = "int"   , default = "196"      , help = p_help)
     (options, args) = parser.parse_args()
     #--------END Command Line option parser-------------------------------------------------
