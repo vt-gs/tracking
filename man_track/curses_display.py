@@ -123,6 +123,8 @@ class Display_Thread(threading.Thread):
         self.cmd_az, self.cmd_el, self.current_az, self.current_el, self.az_tol, self.el_tol, self.status = self.tt.get_feedback()
         if self.current_az < 0:
             self.current_az_adj = 360 - (self.current_az * -1)
+        else:
+            self.current_az_adj = self.current_az
         
     def Update_Display(self):
         self.screen.addstr(5, 58,"    ")
