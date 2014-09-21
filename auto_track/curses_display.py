@@ -56,31 +56,34 @@ class Display_Thread(threading.Thread):
             self.get_feedback()
             self.Update_Tracker_Display()
             self.Update_Predict_Display()
+            if self.tt.suspend == False:
+                self.target_az = self.satellite.az
+                self.target_el = self.satellite.el
+                self.send_update_msg()
         curses.endwin()    
 
-    
     def send_update_msg(self):
         self.tt.Write_Message(self.target_az, self.target_el)
-        
+
     def suspend_predict(self):
         if self.pt.suspend == False:
             self.pt.suspend = True
             self.screen.addstr(21, 16, "         ")
-            self.screen.addstr(21, 16, "Enabled ")
+            self.screen.addstr(21, 16, "Disabled ")
         elif self.pt.suspend == True:
             self.pt.suspend = False
             self.screen.addstr(21, 16, "         ")
-            self.screen.addstr(21, 16, "Disabled ")
-    
+            self.screen.addstr(21, 16, "Enabled ")
+
     def suspend_tracker(self):
         if self.tt.suspend == False:
             self.tt.suspend = True
             self.screen.addstr(20, 16, "         ")
-            self.screen.addstr(20, 16, "Enabled ")
+            self.screen.addstr(20, 16, "Disabled ")
         elif self.tt.suspend == True:
             self.tt.suspend = False
             self.screen.addstr(20, 16, "         ")
-            self.screen.addstr(20, 16, "Disabled ")
+            self.screen.addstr(20, 16, "Enabled ")
 
     def stow_antennas(self):
         #REFERENCE:  http://gnosis.cx/publish/programming/charming_python_6.html
@@ -170,7 +173,7 @@ class Display_Thread(threading.Thread):
         self.screen.addstr(1, 0,"                    Auto Tracking - VTGS                                      ", curses.A_REVERSE)
         self.screen.addstr(2, 0,"==============================================================================", curses.A_REVERSE)
 #       self.screen.addstr(3, 0,"                                   ", curses.A_UNDERLINE)
-        self.screen.addstr(4, 31,"                Predict Feedback              ", curses.A_REVERSE)
+        self.screen.addstr(4, 31,"                Predict Feedback               ", curses.A_REVERSE)
         self.screen.addstr(5, 31,"|     Satellite Name:                         |")
         self.screen.addstr(6, 31,"|     Latitude [deg]:                         |")
         self.screen.addstr(7, 31,"|    Longitude [deg]:                         |")

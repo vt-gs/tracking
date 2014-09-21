@@ -15,13 +15,13 @@ class Predict_Thread(threading.Thread):
         self.port = options.pred_port
         self.sat_id = options.sat_id
         self.interval = options.interval
-        self.suspend = True
+        self.suspend = False
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP Socket
         self.satellite = satellite()
 
     def run(self):
         while (not self._stop.isSet()):
-            if self.suspend != False: self.Get_Sat_Data()
+            if self.suspend == False: self.Get_Sat_Data()
             time.sleep(self.interval)
         sys.exit()
 
