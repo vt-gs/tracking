@@ -6,14 +6,13 @@ import sys
 import time
 import curses
 import threading
-from optparse import OptionParser
 
 class Tracker_Thread(threading.Thread):
     def __init__ (self, options):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
-        self.ip = options.ip
-        self.port = options.port
+        self.ip = options.track_ip
+        self.port = options.track_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.cmd_az = 0.0       #Commanded Azimuth
         self.cmd_el = 0.0       #Commanded Elevation
@@ -22,6 +21,7 @@ class Tracker_Thread(threading.Thread):
         self.az_tol = 0.0       #Azimuth Tolerance
         self.el_tol = 0.0       #Elevation Tolerance
         self.status = ""        #Antenna Pedestal Status
+        self.suspend = False
 
     def run(self):
         self.sock.connect((self.ip,self.port))
