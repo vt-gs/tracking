@@ -25,25 +25,22 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
     #--------END Command Line option parser-------------------------------------------------
 
-    if options.sat_id == "":
-        print "Must Enter a Satellite Name using the --sat-id flag"
-        print "Terminating..."
-        sys.exit()
+    
 
-    pt = Predict_Thread(options)
-    tt = Tracker_Thread(options)
-    dt = Display_Thread(options, tt, pt)
-    pt.daemon = True
-    tt.daemon = True
-    dt.daemon = True
-    pt.start()
-    tt.start()
-    dt.run()
-    sys.exit()
+    #pt = Predict_Thread(options)
+    #tt = Tracker_Thread(options)
+    #dt = Display_Thread(options, tt, pt)
+    #pt.daemon = True
+    #tt.daemon = True
+    #dt.daemon = True
+    #pt.start()
+    #tt.start()
+    #dt.run()
+    #sys.exit()
 
 
     app = QtGui.QApplication(sys.argv)
-    ex = tracker_gui()
+    ex = tracker_main_gui()
     sys.exit(app.exec_())
 
 
