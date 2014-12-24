@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 from optparse import OptionParser
 from tracker_module import *
-from curses_display import *
 from predict import *
+from tracker_gui import *
 import sys
 
 if __name__ == '__main__':
@@ -40,6 +40,12 @@ if __name__ == '__main__':
     tt.start()
     dt.run()
     sys.exit()
+
+
+    app = QtGui.QApplication(sys.argv)
+    ex = tracker_gui()
+    sys.exit(app.exec_())
+
 
     #stop_flag = False
     #while not stop_flag:
