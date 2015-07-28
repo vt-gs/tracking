@@ -51,7 +51,7 @@ class md01(object):
         #get azimuth and elevation feedback from md01
         try:
             self.sock.send(self.status_cmd) 
-            self.recv_data()          
+            self.feedback = self.recv_data()          
         except socket.error as msg:
             print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
             print "Closing socket, Terminating program...."
@@ -64,7 +64,7 @@ class md01(object):
         #stop md01 immediately
         try:
             self.sock.send(self.stop_cmd) 
-            self.recv_data()          
+            self.feedback = self.recv_data()          
         except socket.error as msg:
             print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
             print "Closing socket, Terminating program...."
@@ -88,29 +88,32 @@ class md01(object):
 
     def recv_data(self):
         #receive socket data
-        self.feedback = ''
+        feedback = ''
         while True:
             c = self.sock.recv(1)
             if hexlify(c) == '20':
-                self.feedback += c
+                feedback += c
                 break
             else:
-                self.feedback += c
+                feedback += c
+        print hexlify(feedback)
+        return feedback
 
     def convert_feedback(self):
-        h1 = self.feedback[1]
-        h2 = self.feedback[2]
-        h3 = self.feedback[3]
-        h4 = self.feedback[4]
-        self.cur_az = ord(h1)*100.0 + ord(h2)*10.0 + ord(h3)*10.0 + ord(h4)/10.0 - 360.0
+        h1 = ord(self.feedback[1])
+        h2 = ord(self.feedback[2])
+        h3 = ord(self.feedback[3])
+        h4 = ord(self.feedback[4])
+        #print h1, h2, h3, h4
+        self.cur_az = (h1*100.0 + h2*10.0 + h3 + h4/10.0) - 360.0
         self.ph = ord(self.feedback[5])
 
-        v1 = self.feedback[1]
-        v2 = self.feedback[2]
-        v3 = self.feedback[3]
-        v4 = self.feedback[4]
-        self.cur_el = ord(v1)*100.0 + ord(v2)*10.0 + ord(v3)*10.0 + ord(v4)/10.0 - 360.0
-        self.pv = ord(self.feedback[5])
+        v1 = ord(self.feedback[6])
+        v2 = ord(self.feedback[7])
+        v3 = ord(self.feedback[8])
+        v4 = ord(self.feedback[9])
+        self.cur_el = (v1*100.0 + v2*10.0 + v3 + v4/10.0) - 360.0
+        self.pv = ord(self.feedback[10])
 
     def format_set_cmd(self):
         #make sure cmd_az in range 0 to 360
@@ -118,7 +121,7 @@ class md01(object):
         elif (self.cmd_az < 0): self.cmd_az = self.cmd_az + 360
         #make sure cmd_el in range 0 to 180
         if   (self.cmd_el < 0): self.cmd_el = 0
-        elif (self.cmd_az>180): self.cmd_el = 180
+        elif (self.cmd_el>180): self.cmd_el = 180
         #convert commanded az, el angles into strings
         cmd_az_str = str(int((float(self.cmd_az) + 360) * self.ph))
         cmd_el_str = str(int((float(self.cmd_el) + 360) * self.pv))
