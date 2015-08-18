@@ -116,9 +116,9 @@ class md01(object):
         self.pv = ord(self.feedback[10])
 
     def format_set_cmd(self):
-        #make sure cmd_az in range 0 to 360
-        if   (self.cmd_az>360): self.cmd_az = self.cmd_az - 360
-        elif (self.cmd_az < 0): self.cmd_az = self.cmd_az + 360
+        #make sure cmd_az in range -180 to +540
+        if   (self.cmd_az>540): self.cmd_az = 540
+        elif (self.cmd_az < -180): self.cmd_az = -180
         #make sure cmd_el in range 0 to 180
         if   (self.cmd_el < 0): self.cmd_el = 0
         elif (self.cmd_el>180): self.cmd_el = 180
