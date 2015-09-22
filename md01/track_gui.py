@@ -34,7 +34,7 @@ class MainWindow(QtGui.QWidget):
 
         self.callback    = None   #Callback accessor for tracking control
         self.connected   = False  #Status of TCP/IP connection to MD-01
-        self.update_rate = 1000   #ADC Auto Update Interval in milliseconds
+        self.update_rate = 250    #Feedback Query Auto Update Interval in milliseconds
 
         self.initUI()
         self.darken()
@@ -71,14 +71,18 @@ class MainWindow(QtGui.QWidget):
         self.connectButton.clicked.connect(self.connectButtonEvent)
         self.queryButton.clicked.connect(self.queryButtonEvent) 
         self.stopButton.clicked.connect(self.stopButtonEvent) 
-        self.homeButton.clicked.connect(self.homeButtonEvent) 
+        self.homeButton.clicked.connect(self.homeButtonEvent)
+        self.updateButton.clicked.connect(self.updateButtonEvent)  
         self.autoQuery_cb.stateChanged.connect(self.catchAutoQueryEvent)
 
-        #QtCore.QObject.connect(self.updateTimer, QtCore.SIGNAL('timeout()'), self.autoUpdate)
         QtCore.QObject.connect(self.updateTimer, QtCore.SIGNAL('timeout()'), self.queryButtonEvent)
         QtCore.QObject.connect(self.update_rate_le, QtCore.SIGNAL('editingFinished()'), self.updateRate)
         QtCore.QObject.connect(self.ipAddrTextBox, QtCore.SIGNAL('editingFinished()'), self.updateIPAddress)
         QtCore.QObject.connect(self.portTextBox, QtCore.SIGNAL('editingFinished()'), self.updatePort)
+
+    def updateButtonEvent(self):
+        self.updateAzimuth()
+        self.updateElevation()
 
     def homeButtonEvent(self):
         self.tar_az = self.home_az
@@ -92,10 +96,13 @@ class MainWindow(QtGui.QWidget):
         self.el_compass.set_cur_el(self.cur_el)
 
     def queryButtonEvent(self):
-        self.cur_az, self.cur_el = self.callback.get_status()
-        print self.cur_az, self.cur_el
-        self.az_compass.set_cur_az(self.cur_az)
-        self.el_compass.set_cur_el(self.cur_el)
+        status, self.cur_az, self.cur_el = self.callback.get_status()
+        if status != -1:
+            self.az_compass.set_cur_az(self.cur_az)
+            self.el_compass.set_cur_el(self.cur_el)
+        else:
+            self.autoQuery_cb.setCheckState(QtCore.Qt.Unchecked)
+
 
     def connectButtonEvent(self):
         if (not self.connected):  #Not connected, attempt to connect
@@ -127,11 +134,6 @@ class MainWindow(QtGui.QWidget):
         else:
             self.updateTimer.stop()
             print self.getTimeStampGMT() + "GUI|  Stopped Auto Update"
-
-    def autoUpdate(self):
-        print "auto update running"
-        #self.callback.get_status
-        #self.cur_az = self.callback.cur
 
     def updateRate(self):
         self.update_rate = float(self.update_rate_le.text()) * 1000.0
@@ -274,13 +276,13 @@ class MainWindow(QtGui.QWidget):
                                                     color:rgb(255,255,255); }")
 
         self.update_rate_le = QtGui.QLineEdit()
-        self.update_rate_le.setText("1")
+        self.update_rate_le.setText("0.25")
         self.update_val = QtGui.QDoubleValidator()
         self.update_rate_le.setValidator(self.update_val)
         self.update_rate_le.setEchoMode(QtGui.QLineEdit.Normal)
         self.update_rate_le.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
         self.update_rate_le.setMaxLength(4)
-        self.update_rate_le.setFixedWidth(30)
+        self.update_rate_le.setFixedWidth(50)
 
         hbox1 = QtGui.QHBoxLayout()
         hbox1.addWidget(self.autoQuery_cb)

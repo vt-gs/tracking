@@ -8,7 +8,6 @@ from optparse import OptionParser
 from binascii import *
 from md01 import *
 from track_gui import *
-import ipdb
 
 if __name__ == '__main__':
 	
@@ -21,9 +20,8 @@ if __name__ == '__main__':
     parser.add_option("-p", dest = "port", action = "store", type = "int"   , default = "2000"         , help = p_help)
     (options, args) = parser.parse_args()
     #--------END Command Line option parser-------------------------------------------------
-    #ipdb.set_trace()
+
     vhf_uhf_md01 = md01(options.ip, options.port)
-    #vhf_uhf_md01.connect()
 
     app = QtGui.QApplication(sys.argv)
     win = MainWindow(options.ip, options.port)
