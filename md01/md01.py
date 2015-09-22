@@ -80,7 +80,7 @@ class md01(object):
         #stop md01 immediately
         if self.connected == False:
             self.printNotConnected('Set Stop')
-            return -1
+            return -1, 0, 0
         else:
             try:
                 self.sock.send(self.stop_cmd) 
@@ -91,7 +91,7 @@ class md01(object):
                 self.sock.close()
                 sys.exit()
             self.convert_feedback()
-            return self.cur_az, self.cur_el   
+            return 0, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
 
     def set_position(self, az, el):
         #set azimuth and elevation of md01

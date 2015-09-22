@@ -91,9 +91,10 @@ class MainWindow(QtGui.QWidget):
         self.updateElevation()
 
     def stopButtonEvent(self):
-        self.cur_az, self.cur_el = self.callback.set_stop()
-        self.az_compass.set_cur_az(self.cur_az)
-        self.el_compass.set_cur_el(self.cur_el)
+        status, self.cur_az, self.cur_el = self.callback.set_stop()
+        if status != -1:
+            self.az_compass.set_cur_az(self.cur_az)
+            self.el_compass.set_cur_el(self.cur_el)
 
     def queryButtonEvent(self):
         status, self.cur_az, self.cur_el = self.callback.get_status()
