@@ -45,6 +45,7 @@ class MainWindow(QtGui.QWidget):
         self.initAzimuth()
         self.initElevation()
         self.initControls()
+        self.initMotorCtrl()
         self.initNet()
         self.connectSignals()
     
@@ -104,7 +105,6 @@ class MainWindow(QtGui.QWidget):
         else:
             self.autoQuery_cb.setCheckState(QtCore.Qt.Unchecked)
 
-
     def connectButtonEvent(self):
         if (not self.connected):  #Not connected, attempt to connect
             self.connected = self.callback.connect()
@@ -131,15 +131,15 @@ class MainWindow(QtGui.QWidget):
         CheckState = (state == QtCore.Qt.Checked)
         if CheckState == True:  
             self.updateTimer.start()
-            print self.getTimeStampGMT() + "GUI|  Started Auto Update, Interval: " + str(self.update_rate) + " [ms]"
+            print self.getTimeStampGMT() + "GUI  | Started Auto Update, Interval: " + str(self.update_rate) + " [ms]"
         else:
             self.updateTimer.stop()
-            print self.getTimeStampGMT() + "GUI|  Stopped Auto Update"
+            print self.getTimeStampGMT() + "GUI  | Stopped Auto Update"
 
     def updateRate(self):
         self.update_rate = float(self.update_rate_le.text()) * 1000.0
         self.updateTimer.setInterval(self.update_rate)
-        print self.getTimeStampGMT() + "GUI|  Updated Rate Interval to " + str(self.update_rate) + " [ms]"
+        print self.getTimeStampGMT() + "GUI  | Updated Rate Interval to " + str(self.update_rate) + " [ms]"
 
     def updateIPAddress(self):
         self.ip = self.ipAddrTextBox.text()
@@ -307,6 +307,40 @@ class MainWindow(QtGui.QWidget):
         self.updateTimer = QtCore.QTimer(self)
         self.updateTimer.setInterval(self.update_rate)
 
+    def initMotorCtrl(self):
+        self.UpLeftButton = QtGui.QPushButton("U+L")
+        self.UpButton = QtGui.QPushButton("Up")
+        self.UpRightButton = QtGui.QPushButton("U+R")
+        self.LeftButton = QtGui.QPushButton("Left")
+        self.StopButton = QtGui.QPushButton("STOP!")
+        self.RightButton = QtGui.QPushButton("Right")
+        self.DnLeftButton = QtGui.QPushButton("D+L")
+        self.DownButton = QtGui.QPushButton("Down")
+        self.DnRightButton = QtGui.QPushButton("D+R")
+
+        vbox = QtGui.QVBoxLayout()
+        hbox1 = QtGui.QHBoxLayout()
+        hbox2 = QtGui.QHBoxLayout()
+        hbox3 = QtGui.QHBoxLayout()
+
+        hbox1.addWidget(self.UpLeftButton)
+        hbox1.addWidget(self.UpButton)
+        hbox1.addWidget(self.UpRightButton)
+
+        hbox2.addWidget(self.LeftButton)
+        hbox2.addWidget(self.StopButton)
+        hbox2.addWidget(self.RightButton)
+
+        hbox3.addWidget(self.DnLeftButton)
+        hbox3.addWidget(self.DownButton)
+        hbox3.addWidget(self.DnRightButton)
+
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addLayout(hbox3)
+
+        self.ctrl_fr.setLayout(vbox)
+
     def initElevation(self):
         self.el_compass = el_QwtDial(self.el_fr)
         x = 172; y = 350; w = 50; s = 4; h = 25
@@ -341,7 +375,7 @@ class MainWindow(QtGui.QWidget):
         self.elTextBox.setEchoMode(QtGui.QLineEdit.Normal)
         self.elTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
         self.elTextBox.setMaxLength(6)
-        self.elTextBox.setGeometry(145,320,60,25)
+        self.elTextBox.setGeometry(140,320,60,25)
 
     def initAzimuth(self):
         #geo = self.az_fr.frameRect()
@@ -378,7 +412,7 @@ class MainWindow(QtGui.QWidget):
         self.azTextBox.setEchoMode(QtGui.QLineEdit.Normal)
         self.azTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
         self.azTextBox.setMaxLength(6)
-        self.azTextBox.setGeometry(145,320,60,25)
+        self.azTextBox.setGeometry(140,320,60,25)
 
     def initFrames(self):
         self.az_fr = QtGui.QFrame(self)
@@ -393,13 +427,18 @@ class MainWindow(QtGui.QWidget):
 
         self.button_fr = QtGui.QFrame(self)
         self.button_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.button_fr.setFixedWidth(340)
-        self.button_fr.setFixedHeight(100)
+        self.button_fr.setFixedWidth(250)
+        self.button_fr.setFixedHeight(90)
+
+        self.ctrl_fr = QtGui.QFrame(self)
+        self.ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.ctrl_fr.setFixedWidth(220)
+        self.ctrl_fr.setFixedHeight(90)
 
         self.net_fr = QtGui.QFrame(self)
         self.net_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.net_fr.setFixedWidth(340)
-        self.net_fr.setFixedHeight(100)
+        self.net_fr.setFixedWidth(200)
+        self.net_fr.setFixedHeight(90)
 
         vbox = QtGui.QVBoxLayout()
         hbox1 = QtGui.QHBoxLayout()
@@ -409,11 +448,12 @@ class MainWindow(QtGui.QWidget):
         hbox1.addWidget(self.el_fr)
 
         hbox2.addWidget(self.net_fr)
+        hbox2.addWidget(self.ctrl_fr)
         hbox2.addWidget(self.button_fr)        
 
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        
+
         self.setLayout(vbox)
 
     def darken(self):

@@ -18,7 +18,7 @@ class md01(object):
         self.connected  = False
         self.retries    = retries   #Number of times to attempt reconnection, default = 2
 
-        self.cmd_az     = 0         #Commanded Azimuth, used in Set Position Command
+        self.cmd_az     = 0         #  Commanded Azimuth, used in Set Position Command
         self.cmd_el     = 0         #Commanded Elevation, used in Set Position command
         self.cur_az     = 0         #  Current Azimuth, in degrees, from feedback
         self.cur_el     = 0         #Current Elevation, in degrees, from feedback
@@ -31,7 +31,7 @@ class md01(object):
         self.ph         = 10        #  Azimuth Resolution, in pulses per degree, from feedback, default = 10
         self.pv         = 10        #Elevation Resolution, in pulses per degree, from feedback, default = 10
 
-        self.feedback   = ''        #Feedback data from socket
+        self.feedback   = ''            #Feedback data from socket
         self.stop_cmd   = bytearray()   #Stop Command Message
         self.status_cmd = bytearray()   #Status Command Message
         self.set_cmd    = bytearray()   #Set Command Message
@@ -42,7 +42,6 @@ class md01(object):
 
     def socketTimeoutEvent(self):
         print "SOCKET TIMEOUT EVENT"
-        
 
     def init_commands(self):
         #stop command
@@ -65,7 +64,7 @@ class md01(object):
         #Initialized to 0.0 and 0.0 for az and el.
         #byte 2,3,4,5 = azimuth in pulse count form, range:  30-39(dec), ascii value for digit
         #byte 7,8,9,10 = elevation in pulse count form, range: 30-39(dec), assci value for digit
-        for x in [0x57,0,0,0,0,0,0,0,0,0,0,0xF9,0x20]: self.clean_cmd.append(x)
+        for x in [0x57,0,0,0,0,0,0,0,0,0,0,0xF9,0x20]: self.cal_cmd.append(x)
 
         #Set Motor Power Command
         #Initialize motor power to full power 
@@ -78,16 +77,16 @@ class md01(object):
 
     def connect(self):
         #connect to md01 controller
-        self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.sock.settimeout(self.timeout)   #set socket timeout
         #QtCore.QObject.connect(self.updateTimer, QtCore.SIGNAL('timeout()'), self.queryButtonEvent)
         #self.sock.timeout.connect(self.socketTimeoutEvent)
-        print self.getTimeStampGMT() + 'MD01 |  Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
+        print self.getTimeStampGMT() + 'MD01 | Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
         try:
             self.sock.connect((self.ip, self.port))
             self.connected = True
             self.set_motor_power(1,1) #set motors to full power
-            print self.getTimeStampGMT() + 'MD01 |  Successfully connected to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
+            print self.getTimeStampGMT() + 'MD01 | Successfully connected to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
             return self.connected
             
             #upon connection, get status to determine current antenna position
@@ -104,11 +103,11 @@ class md01(object):
 
     def disconnect(self):
         #disconnect from md01 controller
-        print self.getTimeStampGMT() + "MD01 |  Attempting to disconnect from MD01 Controller"
+        print self.getTimeStampGMT() + "MD01 | Attempting to disconnect from MD01 Controller"
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
         self.connected = False
-        print self.getTimeStampGMT() + "MD01 |  Successfully disconnected from MD01 Controller"
+        print self.getTimeStampGMT() + "MD01 | Successfully disconnected from MD01 Controller"
     
     def get_status(self):
         #get azimuth and elevation feedback from md01
@@ -167,7 +166,17 @@ class md01(object):
 
     def zero_feedback(self):
         #Reset current az and current el position to 0
-        pass
+        if self.connected == False:
+            self.printNotConnected('Zero Feedback')
+            return -1
+        else:
+            try:
+                self.sock.send(self.clean_cmd) 
+            except socket.error as msg:
+                print "Exception Thrown: " + str(msg)
+                print "Closing socket, Terminating program...."
+                self.sock.close()
+                sys.exit()
 
     def set_motor_power(self, az_pwr_percent, el_pwr_percent):
         self.az_pwr = int(az_pwr_percent * 64)
@@ -249,6 +258,6 @@ class md01(object):
         self.set_cmd[10] = self.pv
 
     def printNotConnected(self, msg):
-        print self.getTimeStampGMT() + "MD01 |  Cannot " + msg + " until connected to MD01 Controller."
+        print self.getTimeStampGMT() + "MD01 | Cannot " + msg + " until connected to MD01 Controller."
 
 
