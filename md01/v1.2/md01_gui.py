@@ -26,6 +26,5 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     win = MainWindow(options.ip, options.port)
     win.setCallback(vhf_uhf_md01)
-    win.show()
     sys.exit(app.exec_())
     sys.exit()

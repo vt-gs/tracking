@@ -74,12 +74,6 @@ class el_QwtDial(Qwt.QwtDial):
         self.tar_label.setGeometry(280,293,50,25)
         self.tar_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
 
-
-
-
-
-
-
         self.cur_lcd = overlayLCD(self.parent, True)
         self.tar_lcd = overlayLCD(self.parent, False)
         self.overlayDial = overlayElQwtDial(self.parent)

@@ -45,8 +45,10 @@ class az_QwtDial(Qwt.QwtDial):
         self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Ray, 1, QtGui.QColor(255,0,0))
         self.setOrigin(270)
         self.initUI()
-        self.setGeometry(5,5,330,330)
-        
+        #self.setGeometry(5,5,330,330)
+        self.move(5,5)
+        self.resize(330,330)
+
     def initUI(self):
         self.setFrameShadow(Qwt.QwtDial.Plain)
         self.needle.setWidth(4)
@@ -101,7 +103,9 @@ class overlayAzQwtDial(Qwt.QwtDial):
         self.setOrigin(270)
         #ipdb.set_trace()
         self.initUI()
-        self.setGeometry(5,5,330,330)
+        self.move(5,5)
+        self.resize(330,330)
+        #self.setGeometry(5,5,330,330)
 
     def initUI(self):
         self.setFrameShadow(Qwt.QwtDial.Plain)
