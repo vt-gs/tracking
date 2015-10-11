@@ -18,11 +18,8 @@ class main_widget(QtGui.QWidget):
         self.initUI()
        
     def initUI(self):
-        
         self.grid = QtGui.QGridLayout()
         self.setLayout(self.grid)
-        #self.grid.setColumnStretch(0,1)
-        #self.grid.setColumnStretch(1,2)
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, ip, port):
@@ -59,15 +56,16 @@ class MainWindow(QtGui.QMainWindow):
         self.setFocus()
 
     def initUI(self):
-        #self.grid = QtGui.QGridLayout()
-        #self.setLayout(self.grid)
         self.initFrames()
         self.Init_Tabs()
         self.initAzimuth()
         self.initElevation()
+        self.initNetTab()
+        self.initMotorCtrl()
+        self.initMainTab()
         #self.initControls()
-        #self.initMotorCtrl()
-        #self.initNet()
+        
+        
         #self.connectSignals()
         self.show()
     
@@ -84,7 +82,7 @@ class MainWindow(QtGui.QMainWindow):
         self.tabs.addTab(self.config_tab,"Configuration")
 
         self.net_tab = QtGui.QWidget()	
-        self.net_tab.grid = QtGui.QGridLayout()
+        self.net_tab_grid = QtGui.QGridLayout()
         self.tabs.addTab(self.net_tab,"Network")
         
         palette = QtGui.QPalette()
@@ -214,14 +212,104 @@ class MainWindow(QtGui.QMainWindow):
         hbox1.addWidget(self.azPlusTenButton)
         self.az_ctrl_fr.setLayout(hbox1)
 
+    def initNetTab(self):
+        self.ipAddrTextBox = QtGui.QLineEdit()
+        self.ipAddrTextBox.setText(self.ip)
+        self.ipAddrTextBox.setInputMask("000.000.000.000;")
+        self.ipAddrTextBox.setEchoMode(QtGui.QLineEdit.Normal)
+        self.ipAddrTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        self.ipAddrTextBox.setFixedWidth(150)
+        self.ipAddrTextBox.setMaxLength(15)
 
+        self.portTextBox = QtGui.QLineEdit()
+        self.portTextBox.setText(str(self.port))
+        self.port_validator = QtGui.QIntValidator()
+        self.port_validator.setRange(0,65535)
+        self.portTextBox.setValidator(self.port_validator)
+        self.portTextBox.setEchoMode(QtGui.QLineEdit.Normal)
+        self.portTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        self.portTextBox.setMaxLength(5)
+        self.portTextBox.setFixedWidth(50)
 
+        label = QtGui.QLabel('Status:')
+        label.setAlignment(QtCore.Qt.AlignRight)
+        self.net_label = QtGui.QLabel('Disconnected')
+        self.net_label.setAlignment(QtCore.Qt.AlignLeft)
+        self.net_label.setFixedWidth(150)
 
+        self.connectButton = QtGui.QPushButton("Connect")
+        self.connectButton.setFixedWidth(200)
+        self.net_label.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,0,0);}")
 
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addWidget(self.ipAddrTextBox)
+        hbox1.addWidget(self.portTextBox)
+        hbox1.addStretch(1)
 
+        hbox2 = QtGui.QHBoxLayout()
+        hbox2.addWidget(self.connectButton)
+        hbox2.addStretch(1)
 
+        hbox3 = QtGui.QHBoxLayout()
+        hbox3.addWidget(label)
+        hbox3.addWidget(self.net_label)
+        hbox3.addStretch(1)
 
+        vbox = QtGui.QVBoxLayout()
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addLayout(hbox3)
 
+        self.net_tab.setLayout(vbox)
+        #self.net_tab_grid.addWidget(self.ipAddrTextBox,0,0,1,1)
+        #self.net_tab_grid.addWidget(self.portTextBox,0,10,1,1)
+
+#        self.net_tab.setLayout(self.net_tab_grid)
+
+    def initMotorCtrl(self):
+        self.dir_fr = QtGui.QFrame(self)
+
+        self.UpLeftButton = QtGui.QPushButton("U+L")
+        self.UpButton = QtGui.QPushButton("Up")
+        self.UpRightButton = QtGui.QPushButton("U+R")
+        self.LeftButton = QtGui.QPushButton("Left")
+        self.StopButton = QtGui.QPushButton("STOP!")
+        self.RightButton = QtGui.QPushButton("Right")
+        self.DnLeftButton = QtGui.QPushButton("D+L")
+        self.DownButton = QtGui.QPushButton("Down")
+        self.DnRightButton = QtGui.QPushButton("D+R")
+
+        vbox = QtGui.QVBoxLayout()
+        hbox1 = QtGui.QHBoxLayout()
+        hbox2 = QtGui.QHBoxLayout()
+        hbox3 = QtGui.QHBoxLayout()
+
+        hbox1.addWidget(self.UpLeftButton)
+        hbox1.addWidget(self.UpButton)
+        hbox1.addWidget(self.UpRightButton)
+
+        hbox2.addWidget(self.LeftButton)
+        hbox2.addWidget(self.StopButton)
+        hbox2.addWidget(self.RightButton)
+
+        hbox3.addWidget(self.DnLeftButton)
+        hbox3.addWidget(self.DownButton)
+        hbox3.addWidget(self.DnRightButton)
+
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addLayout(hbox3)
+
+        self.dir_fr.setLayout(vbox)
+
+    def initMainTab(self):
+
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addStretch(1)        
+        hbox1.addWidget(self.dir_fr)
+        #hbox1.addStretch(1)
+
+        self.main_tab.setLayout(hbox1)
 
 
 
@@ -413,47 +501,6 @@ class MainWindow(QtGui.QMainWindow):
         self.el_compass.set_tar_el(self.tar_el)
         self.callback.set_position(self.tar_az, self.tar_el)
 
-    def initNet(self):
-        self.ipAddrTextBox = QtGui.QLineEdit()
-        self.ipAddrTextBox.setText(self.ip)
-        self.ipAddrTextBox.setInputMask("000.000.000.000;")
-        self.ipAddrTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.ipAddrTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.ipAddrTextBox.setMaxLength(15)
-
-        self.portTextBox = QtGui.QLineEdit()
-        self.portTextBox.setText(str(self.port))
-        self.port_validator = QtGui.QIntValidator()
-        self.port_validator.setRange(0,65535)
-        self.portTextBox.setValidator(self.port_validator)
-        self.portTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.portTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.portTextBox.setMaxLength(5)
-        self.portTextBox.setFixedWidth(50)
-
-        label = QtGui.QLabel('Status:')
-        label.setAlignment(QtCore.Qt.AlignRight)
-        self.net_label = QtGui.QLabel('Disconnected')
-        self.net_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.net_label.setFixedWidth(150)
-
-        self.connectButton = QtGui.QPushButton("Connect")
-        self.net_label.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,0,0);}")
-
-        hbox1 = QtGui.QHBoxLayout()
-        hbox1.addWidget(self.ipAddrTextBox)
-        hbox1.addWidget(self.portTextBox)
-
-        hbox2 = QtGui.QHBoxLayout()
-        hbox2.addWidget(label)
-        hbox2.addWidget(self.net_label)
-
-        vbox = QtGui.QVBoxLayout()
-        vbox.addLayout(hbox1)
-        vbox.addWidget(self.connectButton)
-        vbox.addLayout(hbox2)
-
-        self.net_fr.setLayout(vbox)
 
     def initControls(self):
         self.updateButton = QtGui.QPushButton("Update")
@@ -497,40 +544,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updateTimer = QtCore.QTimer(self)
         self.updateTimer.setInterval(self.update_rate)
 
-    def initMotorCtrl(self):
-        self.UpLeftButton = QtGui.QPushButton("U+L")
-        self.UpButton = QtGui.QPushButton("Up")
-        self.UpRightButton = QtGui.QPushButton("U+R")
-        self.LeftButton = QtGui.QPushButton("Left")
-        self.StopButton = QtGui.QPushButton("STOP!")
-        self.RightButton = QtGui.QPushButton("Right")
-        self.DnLeftButton = QtGui.QPushButton("D+L")
-        self.DownButton = QtGui.QPushButton("Down")
-        self.DnRightButton = QtGui.QPushButton("D+R")
-
-        vbox = QtGui.QVBoxLayout()
-        hbox1 = QtGui.QHBoxLayout()
-        hbox2 = QtGui.QHBoxLayout()
-        hbox3 = QtGui.QHBoxLayout()
-
-        hbox1.addWidget(self.UpLeftButton)
-        hbox1.addWidget(self.UpButton)
-        hbox1.addWidget(self.UpRightButton)
-
-        hbox2.addWidget(self.LeftButton)
-        hbox2.addWidget(self.StopButton)
-        hbox2.addWidget(self.RightButton)
-
-        hbox3.addWidget(self.DnLeftButton)
-        hbox3.addWidget(self.DownButton)
-        hbox3.addWidget(self.DnRightButton)
-
-        vbox.addLayout(hbox1)
-        vbox.addLayout(hbox2)
-        vbox.addLayout(hbox3)
-
-        self.ctrl_fr.setLayout(vbox)
-
+    
     
 
 
