@@ -20,7 +20,6 @@ class overlayLabel(QtGui.QLabel):
         font.setPixelSize(pixelSize)
         font.setUnderline(underline)
         self.setFont(font)
-        #self.setGeometry(2,2,100,25)
         self.setText(text)
 
 class overlayLCD(QtGui.QLCDNumber):    
@@ -29,25 +28,20 @@ class overlayLCD(QtGui.QLCDNumber):
         self.setSegmentStyle(QtGui.QLCDNumber.Flat)
         palette = QtGui.QPalette(self.palette())
         palette.setColor(palette.Background,QtCore.Qt.transparent)
-        if feedback_bool == True: 
-            palette.setColor(palette.Foreground,QtGui.QColor(255,0,0))
-            self.setGeometry(10,315,85,30)
-        else: 
-            palette.setColor(palette.Foreground,QtGui.QColor(0,0,255))
-            self.setGeometry(245,315,85,30)
+        if feedback_bool == True: palette.setColor(palette.Foreground,QtGui.QColor(255,0,0))
+        else: palette.setColor(palette.Foreground,QtGui.QColor(0,0,255))
         self.setPalette(palette)
+        self.setFixedHeight(30)
+        self.setFixedWidth(85)
         self.display(0)
 
 class az_QwtDial(Qwt.QwtDial):
-    def __init__(self, parent=None):
-        super(az_QwtDial, self).__init__(parent)
-        self.parent = parent
+    def __init__(self, parent_grid):
+        super(az_QwtDial, self).__init__()
+        self.parent_grid = parent_grid
         self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Ray, 1, QtGui.QColor(255,0,0))
         self.setOrigin(270)
         self.initUI()
-        #self.setGeometry(5,5,330,330)
-        self.move(5,5)
-        self.resize(330,330)
 
     def initUI(self):
         self.setFrameShadow(Qwt.QwtDial.Plain)
@@ -63,19 +57,24 @@ class az_QwtDial(Qwt.QwtDial):
         palette.setColor(palette.Text,QtCore.Qt.green)
         self.setPalette(palette)
         
-        self.title_label = overlayLabel(self.parent, "Azimuth")
-        self.title_label.setGeometry(2,2,100,25)
-        self.cur_label = overlayLabel(self.parent, "Current", 15, 255,0,0,False, True)
-        self.cur_label.setGeometry(10,293,60,25)
+        self.title_label = overlayLabel(self, "Azimuth")
+        self.overlayDial = overlayAzQwtDial()
+        self.parent_grid.addWidget(self,0,0,15,15)
+        self.parent_grid.addWidget(self.overlayDial,0,0,15,15)
+
+        self.cur_label = overlayLabel(self, "Current", 15, 255,0,0,False, True)
         self.cur_label.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.parent_grid.addWidget(self.cur_label,12,0,1,1)
 
-        self.tar_label = overlayLabel(self.parent, "Target", 15, 0,0,255,False,True)
-        self.tar_label.setGeometry(280,293,50,25)
+        self.tar_label = overlayLabel(self, "Target", 15, 0,0,255,False,True)
         self.tar_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
+        self.parent_grid.addWidget(self.tar_label,12,14,1,1)
 
-        self.cur_lcd = overlayLCD(self.parent, True)
-        self.tar_lcd = overlayLCD(self.parent, False)
-        self.overlayDial = overlayAzQwtDial(self.parent)
+        self.cur_lcd = overlayLCD(self, True)
+        self.parent_grid.addWidget(self.cur_lcd,13,0,2,1)
+        
+        self.tar_lcd = overlayLCD(self, False)
+        self.parent_grid.addWidget(self.tar_lcd,13,14,2,1)
 
     def set_cur_az(self, az):
         self.cur_lcd.display(az)
@@ -96,16 +95,11 @@ class az_QwtDial(Qwt.QwtDial):
         self.overlayDial.setValue(az)
 
 class overlayAzQwtDial(Qwt.QwtDial):
-    def __init__(self, parent=None):
-        super(overlayAzQwtDial, self).__init__(parent)
-        self.parent = parent
+    def __init__(self):
+        super(overlayAzQwtDial, self).__init__()
         self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Ray, 1, QtGui.QColor(0,0,255))
         self.setOrigin(270)
-        #ipdb.set_trace()
         self.initUI()
-        self.move(5,5)
-        self.resize(330,330)
-        #self.setGeometry(5,5,330,330)
 
     def initUI(self):
         self.setFrameShadow(Qwt.QwtDial.Plain)

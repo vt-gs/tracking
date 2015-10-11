@@ -18,7 +18,7 @@ class main_widget(QtGui.QWidget):
         self.initUI()
        
     def initUI(self):
-        pass
+        
         self.grid = QtGui.QGridLayout()
         self.setLayout(self.grid)
         #self.grid.setColumnStretch(0,1)
@@ -29,8 +29,10 @@ class MainWindow(QtGui.QMainWindow):
         #QtGui.QMainWindow.__init__(self)
         super(MainWindow, self).__init__()
         self.resize(700, 550)
-        #self.setFixedWidth(700)
-        #self.setFixedHeight(700)
+        self.setMinimumWidth(600)
+        self.setMaximumWidth(850)
+        self.setMinimumHeight(500)
+        self.setMaximumHeight(800)
         self.setWindowTitle('MD01 Controller v1.2')
         self.setContentsMargins(0,0,0,0)
         self.main_window = main_widget()
@@ -93,130 +95,124 @@ class MainWindow(QtGui.QMainWindow):
         #self.main_tab.setPalette(palette)
         self.tabs.setPalette(palette)
 
-        self.main_window.grid.addWidget(self.tabs,10,0,5,20)
+        self.main_window.grid.addWidget(self.tabs,13,0,5,20)
 
     def initFrames(self):
-        self.az_fr = QtGui.QFrame(self)
-        self.az_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.az_fr.resize(340,380)
-        #self.az_fr.setFixedWidth(340)
-        #self.az_fr.setFixedHeight(380)
+        self.az_dial_fr = QtGui.QFrame(self)
+        self.az_dial_fr.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.az_dial_fr_grid = QtGui.QGridLayout()
+        self.az_dial_fr.setLayout(self.az_dial_fr_grid)
 
-        self.el_fr = QtGui.QFrame(self)
-        self.el_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.el_fr.resize(340,380)
-        #self.el_fr.setFixedWidth(340)
-        #self.el_fr.setFixedHeight(380)
+        self.az_ctrl_fr = QtGui.QFrame(self)
+        self.az_ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
 
-        self.main_window.grid.addWidget(self.az_fr,0,0,10,10)
-        self.main_window.grid.addWidget(self.el_fr,0,10,10,10)
+        self.el_dial_fr = QtGui.QFrame(self)
+        self.el_dial_fr.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.el_dial_fr_grid = QtGui.QGridLayout()
+        self.el_dial_fr.setLayout(self.el_dial_fr_grid)
 
-        #self.button_fr = QtGui.QFrame(self)
-        #self.button_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        #self.button_fr.setFixedWidth(250)
-        #self.button_fr.setFixedHeight(90)
+        self.el_ctrl_fr = QtGui.QFrame(self)
+        self.el_ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
 
-        #self.ctrl_fr = QtGui.QFrame(self)
-        #self.ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        #self.ctrl_fr.setFixedWidth(220)
-        #self.ctrl_fr.setFixedHeight(90)
-
-        #self.net_fr = QtGui.QFrame(self)
-        #self.net_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        #self.net_fr.setFixedWidth(200)
-        #self.net_fr.setFixedHeight(90)
-
-        #vbox = QtGui.QVBoxLayout()
-        #hbox1 = QtGui.QHBoxLayout()
-        #hbox2 = QtGui.QHBoxLayout()
-
-        #hbox1.addWidget(self.az_fr)
-        #hbox1.addWidget(self.el_fr)
-
-        #hbox2.addWidget(self.net_fr)
-        #hbox2.addWidget(self.ctrl_fr)
-        #hbox2.addWidget(self.button_fr)        
-
-        #vbox.addLayout(hbox1)
-        #vbox.addLayout(hbox2)
-
-        #self.main_tab.setLayout(vbox)
+        self.main_window.grid.addWidget(self.az_dial_fr,0,0,10,10)
+        self.main_window.grid.addWidget(self.az_ctrl_fr,10,0,1,10)
+        self.main_window.grid.addWidget(self.el_dial_fr,0,10,10,10)
+        self.main_window.grid.addWidget(self.el_ctrl_fr,10,10,1,10)
 
     def initElevation(self):
-        self.el_compass = el_QwtDial(self.el_fr)
+        self.el_compass = el_QwtDial(self.el_dial_fr_grid)
 
-        x = 172; y = 350; w = 50; s = 4; h = 25
-        self.elPlusPtOneButton = QtGui.QPushButton(self.el_fr)
+        self.elPlusPtOneButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elPlusPtOneButton.setText("+0.1")
-        self.elPlusPtOneButton.setGeometry(x,y,w,h)
-
+        self.elPlusPtOneButton.setFixedWidth(50)
         
-        self.elPlusOneButton = QtGui.QPushButton(self.el_fr)
+        self.elPlusOneButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elPlusOneButton.setText("+1.0")
-        self.elPlusOneButton.setGeometry(x+s+w,y,w,h)
+        self.elPlusOneButton.setFixedWidth(50)
 
-        self.elPlusTenButton = QtGui.QPushButton(self.el_fr)
+        self.elPlusTenButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elPlusTenButton.setText("+10.0")
-        self.elPlusTenButton.setGeometry(x+(2*s)+(2*w),y,w,h)
+        self.elPlusTenButton.setFixedWidth(50)
 
-        self.elMinusPtOneButton = QtGui.QPushButton(self.el_fr)
+        self.elMinusPtOneButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elMinusPtOneButton.setText("-0.1")
-        self.elMinusPtOneButton.setGeometry(x-s-w,y,w,h)
+        self.elMinusPtOneButton.setFixedWidth(50)
 
-        self.elMinusOneButton = QtGui.QPushButton(self.el_fr)
+        self.elMinusOneButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elMinusOneButton.setText("-1.0")
-        self.elMinusOneButton.setGeometry(x-(2*s)-(2*w),y,w,h)
+        self.elMinusOneButton.setFixedWidth(50)
 
-        self.elMinusTenButton = QtGui.QPushButton(self.el_fr)
+        self.elMinusTenButton = QtGui.QPushButton(self.el_ctrl_fr)
         self.elMinusTenButton.setText("-10.0")
-        self.elMinusTenButton.setGeometry(x-(3*s)-(3*w),y,w,h)
+        self.elMinusTenButton.setFixedWidth(50)
 
-        self.elTextBox = QtGui.QLineEdit(self.el_fr)
-        self.elTextBox.setText("000.0")
-        self.elTextBox.setInputMask("000.0;")
-        self.elTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.elTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.elTextBox.setMaxLength(6)
-        self.elTextBox.setGeometry(140,320,60,25)
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addWidget(self.elMinusTenButton)
+        hbox1.addWidget(self.elMinusOneButton)
+        hbox1.addWidget(self.elMinusPtOneButton)
+        hbox1.addWidget(self.elPlusPtOneButton)
+        hbox1.addWidget(self.elPlusOneButton)
+        hbox1.addWidget(self.elPlusTenButton)
+        self.el_ctrl_fr.setLayout(hbox1)
+
+        #self.elTextBox = QtGui.QLineEdit(self.el_dial_fr)
+        #self.elTextBox.setText("000.0")
+        #self.elTextBox.setInputMask("000.0;")
+        #self.elTextBox.setEchoMode(QtGui.QLineEdit.Normal)
+        #self.elTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        #self.elTextBox.setMaxLength(6)
+        #self.elTextBox.setGeometry(140,320,60,25)
 
     def initAzimuth(self):
-        #geo = self.az_fr.frameRect()
-        #print geo.x, geo.y, geo.width, geo.height
-        self.az_compass = az_QwtDial(self.az_fr)
-        x = 172; y = 350; w = 50; s = 4; h = 25
-        self.azPlusPtOneButton = QtGui.QPushButton(self.az_fr)
+        self.az_compass = az_QwtDial(self.az_dial_fr_grid)
+
+        self.azPlusPtOneButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azPlusPtOneButton.setText("+0.1")
-        self.azPlusPtOneButton.setGeometry(x,y,w,h)
+        self.azPlusPtOneButton.setFixedWidth(50)
 
-        self.azPlusOneButton = QtGui.QPushButton(self.az_fr)
+        self.azPlusOneButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azPlusOneButton.setText("+1.0")
-        self.azPlusOneButton.setGeometry(x+s+w,y,w,h)
+        self.azPlusOneButton.setFixedWidth(50)
 
-        self.azPlusTenButton = QtGui.QPushButton(self.az_fr)
+        self.azPlusTenButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azPlusTenButton.setText("+10.0")
-        self.azPlusTenButton.setGeometry(x+(2*s)+(2*w),y,w,h)
+        self.azPlusTenButton.setFixedWidth(50)
 
-        self.azMinusPtOneButton = QtGui.QPushButton(self.az_fr)
+        self.azMinusPtOneButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azMinusPtOneButton.setText("-0.1")
-        self.azMinusPtOneButton.setGeometry(x-s-w,y,w,h)
+        self.azMinusPtOneButton.setFixedWidth(50)
 
-        self.azMinusOneButton = QtGui.QPushButton(self.az_fr)
+        self.azMinusOneButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azMinusOneButton.setText("-1.0")
-        self.azMinusOneButton.setGeometry(x-(2*s)-(2*w),y,w,h)
+        self.azMinusOneButton.setFixedWidth(50)
 
-        self.azMinusTenButton = QtGui.QPushButton(self.az_fr)
+        self.azMinusTenButton = QtGui.QPushButton(self.az_ctrl_fr)
         self.azMinusTenButton.setText("-10.0")
-        self.azMinusTenButton.setGeometry(x-(3*s)-(3*w),y,w,h)
+        self.azMinusTenButton.setFixedWidth(50)
 
-        self.azTextBox = QtGui.QLineEdit(self.az_fr)
-        self.azTextBox.setText("180.0")
-        self.azTextBox.setInputMask("#000.0;")
-        self.azTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.azTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.azTextBox.setMaxLength(6)
-        self.azTextBox.setGeometry(140,320,60,25)
+        #self.az_ctrl_fr_grid.addWidget(self.azMinusTenButton,0,0,1,1)
+        #self.az_ctrl_fr_grid.addWidget(self.azMinusOneButton,0,1,1,1)
+        #self.az_ctrl_fr_grid.addWidget(self.azMinusPtOneButton,0,2,1,1)
+        #self.az_ctrl_fr_grid.addWidget(self.azPlusPtOneButton,0,3,1,1)
+        #self.az_ctrl_fr_grid.addWidget(self.azPlusOneButton,0,4,1,1)
+        #self.az_ctrl_fr_grid.addWidget(self.azPlusTenButton,0,5,1,1)
 
+        #self.azTextBox = QtGui.QLineEdit(self.az_ctrl_fr)
+        #self.azTextBox.setText("180.0")
+        #self.azTextBox.setInputMask("#000.0;")
+        #self.azTextBox.setEchoMode(QtGui.QLineEdit.Normal)
+        #self.azTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        #self.azTextBox.setMaxLength(6)
+        #self.azTextBox.setGeometry(140,320,60,25)
 
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addWidget(self.azMinusTenButton)
+        hbox1.addWidget(self.azMinusOneButton)
+        hbox1.addWidget(self.azMinusPtOneButton)
+        hbox1.addWidget(self.azPlusPtOneButton)
+        hbox1.addWidget(self.azPlusOneButton)
+        hbox1.addWidget(self.azPlusTenButton)
+        self.az_ctrl_fr.setLayout(hbox1)
 
 
 
