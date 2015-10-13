@@ -63,11 +63,11 @@ class az_QwtDial(Qwt.QwtDial):
         self.parent_grid.addWidget(self.overlayDial,0,0,15,15)
 
         self.cur_label = overlayLabel(self, "Current", 15, 255,0,0,False, True)
-        self.cur_label.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.cur_label.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignBottom)
         self.parent_grid.addWidget(self.cur_label,12,0,1,1)
 
         self.tar_label = overlayLabel(self, "Target", 15, 0,0,255,False,True)
-        self.tar_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
+        self.tar_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignBottom)
         self.parent_grid.addWidget(self.tar_label,12,14,1,1)
 
         self.cur_lcd = overlayLCD(self, True)
