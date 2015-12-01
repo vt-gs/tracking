@@ -1,4 +1,16 @@
 #!/usr/bin/env python
+#########################################
+#   Title: MD01 Controller Class        #
+# Project: VTGS Tracking Daemon         #
+# Version: 1.0                          #
+#    Date: Dec 1, 2015                  #
+#  Author: Zach Leffke, KJ4QLP          #
+# Comment: This is the initial version  # 
+#          of the MD-01 interface and   #
+#          only contains functionality  #
+#          for the Set, Query, and Stop #
+#          commands.                    #
+#########################################
 import socket
 import os
 import string
