@@ -20,7 +20,6 @@ import curses
 import threading
 from binascii import *
 from datetime import datetime as date
-from optparse import OptionParser
 
 class md01(object):
     def __init__ (self, ip, port, timeout = 1.0, retries = 2):
