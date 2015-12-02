@@ -53,7 +53,9 @@ if __name__ == '__main__':
     serv = Main_Thread(options)
     serv.daemon = True
     serv.start()
-    print "Main Thread Started"
+
+    
+
     while 1:
         pass
 

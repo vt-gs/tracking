@@ -59,8 +59,10 @@ class md01(object):
         except socket.error as msg:
             print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
             print "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
-            print "Terminating Program..."
-            sys.exit()
+            self.sock.shutdown(socket.SHUT_RDWR)
+            self.sock.close()
+            self.connected = False
+            return self.connected
 
     def disconnect(self):
         #disconnect from md01 controller
@@ -69,12 +71,13 @@ class md01(object):
         self.sock.close()
         self.connected = False
         print self.getTimeStampGMT() + "MD01 |  Successfully disconnected from MD01 Controller"
+        return self.connected
     
     def get_status(self):
         #get azimuth and elevation feedback from md01
         if self.connected == False:
             self.printNotConnected('Get MD01 Status')
-            return -1,0,0 #return -1 bad status, 0 for az, 0 for el
+            return self.connected,0,0 #return -1 bad status, 0 for az, 0 for el
         else:
             try:
                 self.sock.send(self.status_cmd) 
@@ -83,9 +86,10 @@ class md01(object):
                 print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
                 print "Closing socket, Terminating program...."
                 self.sock.close()
-                sys.exit()
+                self.connected = False
+                return self.connected, self.cur_az, self.cur_el
             self.convert_feedback()  
-            return 0, self.cur_az, self.cur_el #return 0 good status, feedback az/el 
+            return self.connected, self.cur_az, self.cur_el #return 0 good status, feedback az/el 
 
     def set_stop(self):
         #stop md01 immediately
@@ -100,9 +104,9 @@ class md01(object):
                 print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
                 print "Closing socket, Terminating program...."
                 self.sock.close()
-                sys.exit()
+                return self.connected, self.cur_az, self.cur_el
             self.convert_feedback()
-            return 0, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
+            return self.connected, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
 
     def set_position(self, az, el):
         #set azimuth and elevation of md01

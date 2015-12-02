@@ -5,15 +5,17 @@
 # Description: Initial GPS testing
 ##################################################
 
-from optparse import OptionParser
 import threading
-from datetime import datetime as date
 import os
 import math
 import sys
 import string
 import time
 import socket
+
+from optparse import OptionParser
+from datetime import datetime as date
+from md01_thread import *
 
 def getTimeStampGMT(self):
     return str(date.utcnow()) + " GMT | "
@@ -34,10 +36,14 @@ class Main_Thread(threading.Thread):
         self.sock   = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.req    = request()
-        self.cmd    = request()
         self.valid  = False
 
+        self.vul_thread = MD01_Thread('VUL', options.vul_ip, options.vul_port, 2, 2)
+        self.vul_thread.daemon = True
+        self.vul_thread.start()
+
     def run(self):
+        print "Main Thread Started..."
         self.sock.bind((self.ip, self.port))
         while (not self._stop.isSet()):
             data, addr = self.sock.recvfrom(1024) # buffer size is 1024 bytes
@@ -54,7 +60,7 @@ class Main_Thread(threading.Thread):
 
     def Process_Request(self):
         if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
-            pass
+            self.Process_Command(self.vul_thread)
         elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
             pass
         elif self.req.ssid == '4M5': #4.5 m Dish Subsystem ID
@@ -62,14 +68,16 @@ class Main_Thread(threading.Thread):
         elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
             pass
 
-
-        #if   self.cmd == 'SET':     self.valid = True  #Set Command
-        #elif self.cmd == 'QUERY':   self.valid = True  #Query Command
-        #elif self.cmd == 'STOP':    self.valid = True  #Stop Command
-        #else: 
-        #    print "Error | Invalid Command Type: ", self.cmd
-        #    self.valid = False
-
+    def Process_Command(self, thr):
+        if thr.connected == True:
+            if   self.req.cmd == 'SET':
+                thr.set_position(self.req.az, self.req.el)
+            elif self.req.cmd == 'QUERY':
+                az, el = thr.get_position()
+                print az, el
+            elif self.req.cmd == 'STOP':
+                thr.set_stop()
+        
     
 
     def Check_Request(self, data):
