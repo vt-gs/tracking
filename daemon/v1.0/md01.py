@@ -47,10 +47,11 @@ class md01(object):
 
     def connect(self):
         #connect to md01 controller
-        self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
-        self.sock.settimeout(self.timeout)   #set socket timeout
+        
         #print self.getTimeStampGMT() + 'MD01 |  Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
         try:
+            self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
+            self.sock.settimeout(self.timeout)   #set socket timeout
             self.sock.connect((self.ip, self.port))
             self.connected = True
             return self.connected

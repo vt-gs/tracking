@@ -52,9 +52,10 @@ class MD01_Thread(threading.Thread):
                     #time.sleep(0.010)
                     if self.connected == True:
                         print "Connected to " + self.ssid + " MD01 Controller"
+                        time.sleep(0.10)
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
                         #print self.last_az, self.last_el
-                        #time.sleep(1)
+                        time.sleep(1)
                 if self.connected == True:
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
                     if self.connected == False:
