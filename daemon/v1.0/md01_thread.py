@@ -44,21 +44,21 @@ class MD01_Thread(threading.Thread):
 
     def run(self):
         time.sleep(1)  #Give parent thread time to spool up
-        print self.ssid, "Thread Started..."
+        print self.utc_ts() + self.ssid + " Thread Started..."
         while (not self._stop.isSet()):
             try:
                 if self.connected == False: 
                     self.connected = self.md01.connect()
                     time.sleep(1)
                     if self.connected == True:
-                        print "Connected to " + self.ssid + " MD01 Controller"
+                        print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
                         #print self.last_az, self.last_el
                         time.sleep(1)
                 elif self.connected == True:
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
                     if self.connected == False:
-                        print "Disconnected from " + self.ssid + " MD01 Controller"
+                        print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
                     else:
                         az_delta = abs(self.cur_az - self.last_az)
                         el_delta = abs(self.cur_el - self.last_el)
@@ -68,9 +68,9 @@ class MD01_Thread(threading.Thread):
                             self.last_az = self.cur_az
                             self.last_el = self.cur_el
                             #print az_delta, el_delta
-                        time.sleep(0.5)
+                        time.sleep(1)
             except:
-                print "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
+                print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
                 self.connected = False
                 self.thread_fault = True
 
@@ -79,9 +79,9 @@ class MD01_Thread(threading.Thread):
 
     def Antenna_Motion_Fault(self):
         self.motion_fault = True
-        print "----ERROR! ERROR! ERROR!----"
-        print "Antenna Motion Fault in " + str(self.ssid) + " Thread"
-        print "Killing Thread Now..."
+        print self.utc_ts() + "----ERROR! ERROR! ERROR!----"
+        print self.utc_ts() + "Antenna Motion Fault in " + str(self.ssid) + " Thread"
+        print self.utc_ts() + "Killing Thread Now..."
         self.stop_thread()
 
     def get_position(self):
@@ -91,6 +91,9 @@ class MD01_Thread(threading.Thread):
         self.tar_az = az
         self.tar_el = el
         self.md01.set_position(self.tar_az, self.tar_el)
+
+    def utc_ts(self):
+        return str(date.utcnow()) + " UTC | "
 
     def set_stop(self):
         self.motion = False

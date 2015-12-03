@@ -45,6 +45,9 @@ class md01(object):
     def getTimeStampGMT(self):
         return str(date.utcnow()) + " GMT | "
 
+    def utc_ts(self):
+        return str(date.utcnow()) + " UTC | "
+
     def connect(self):
         #connect to md01 controller
         self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket

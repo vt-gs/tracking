@@ -18,7 +18,9 @@ from datetime import datetime as date
 from md01_thread import *
 
 def getTimeStampGMT(self):
-    return str(date.utcnow()) + " GMT | "
+    return str(date.utcnow()) + " UTC | "
+
+
 
 class request(object):
     def __init__ (self, ssid = None, cmd = None, az = None, el = None):
@@ -43,24 +45,27 @@ class Main_Thread(threading.Thread):
         self.vul_thread.start()
 
     def run(self):
-        print "Main Thread Started..."
+        print self.utc_ts() + "Main Thread Started..."
         self.sock.bind((self.ip, self.port))
         while (not self._stop.isSet()):
             data, addr = self.sock.recvfrom(1024) # buffer size is 1024 bytes
-            print "   received from:", addr
-            print "received message:", data
+            #print self.utc_ts() + "   received from:", addr
+            #print self.utc_ts() + "received message:", data
             self.valid = self.Check_Request(data)
             if self.valid == True:
                 #Valid Request Received, process appropriately
-                print self.req.ssid, self.req.cmd, self.req.az, self.req.el
-                self.Process_Request()
+                #print self.req.ssid, self.req.cmd, self.req.az, self.req.el
+                self.Process_Request(data, addr)
             #fields = data.split(" ")
             #print len(fields), fields
         sys.exit()
 
-    def Process_Request(self):
+    
+        
+
+    def Process_Request(self, data, addr):
         if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
-            self.Process_Command(self.vul_thread)
+            self.Process_Command(self.vul_thread, data, addr)
         elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
             pass
         elif self.req.ssid == '4M5': #4.5 m Dish Subsystem ID
@@ -68,15 +73,24 @@ class Main_Thread(threading.Thread):
         elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
             pass
 
-    def Process_Command(self, thr):
+    def Process_Command(self, thr, data, addr):
+        az = 0 
+        el = 0
         if thr.connected == True:
             if   self.req.cmd == 'SET':
                 thr.set_position(self.req.az, self.req.el)
+                az, el = thr.get_position()
             elif self.req.cmd == 'QUERY':
                 az, el = thr.get_position()
-                print az, el
+                #print az, el
             elif self.req.cmd == 'STOP':
                 thr.set_stop()
+                az, el = thr.get_position()
+        self.Send_Feedback(thr, az, el, data, addr)
+
+    def Send_Feedback(self,thr, az, el, data, addr):
+        msg = thr.ssid + " QUERY " + str(az) + " " + str(el) + "\n"
+        self.sock.sendto(msg, addr)
 
     def Check_Request(self, data):
         fields = data.split(" ")
@@ -111,6 +125,9 @@ class Main_Thread(threading.Thread):
                 return False
 
         return True
+
+    def utc_ts(self):
+        return str(date.utcnow()) + " UTC | "
 
     def stop(self):
         self.gps_ser.close()
