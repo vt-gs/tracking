@@ -54,18 +54,8 @@ if __name__ == '__main__':
     serv.daemon = True
     serv.start()
 
-    
-
     while 1:
         pass
-
-
     sys.exit()
-    vul_ip = "192.168.42.21"
-    vul_port = 2000
     
-
-    vul_md01 = md01(vul_ip, vul_port)
-    sys.exit()
-
 

@@ -58,7 +58,6 @@ class MD01_Thread(threading.Thread):
                 if self.connected == True:
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
                     if self.connected == False:
-                        #self.md01.disconnect()
                         print "Disconnected from " + self.ssid + " MD01 Controller"
                     else:
                         az_delta = abs(self.cur_az - self.last_az)
@@ -68,7 +67,7 @@ class MD01_Thread(threading.Thread):
                         else:
                             self.last_az = self.cur_az
                             self.last_el = self.cur_el
-                            print az_delta, el_delta
+                            #print az_delta, el_delta
                         time.sleep(1)
             except:
                 print "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
@@ -80,7 +79,7 @@ class MD01_Thread(threading.Thread):
 
     def Antenna_Motion_Fault(self):
         self.motion_fault = True
-        print "ERROR! ERROR! ERROR!"
+        print "----ERROR! ERROR! ERROR!----"
         print "Antenna Motion Fault in " + str(self.ssid) + " Thread"
         print "Killing Thread Now..."
         self.stop_thread()

@@ -49,7 +49,7 @@ class md01(object):
         #connect to md01 controller
         self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.sock.settimeout(self.timeout)   #set socket timeout
-        print self.getTimeStampGMT() + 'MD01 |  Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
+        #print self.getTimeStampGMT() + 'MD01 |  Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
         try:
             self.sock.connect((self.ip, self.port))
             self.connected = True
@@ -57,8 +57,8 @@ class md01(object):
             #upon connection, get status to determine current antenna position
             #self.get_status()
         except socket.error as msg:
-            print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            print "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
+            #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+            #print "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
             self.connected = False
@@ -66,25 +66,25 @@ class md01(object):
 
     def disconnect(self):
         #disconnect from md01 controller
-        print self.getTimeStampGMT() + "MD01 |  Attempting to disconnect from MD01 Controller"
+        #print self.getTimeStampGMT() + "MD01 |  Attempting to disconnect from MD01 Controller"
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
         self.connected = False
-        print self.getTimeStampGMT() + "MD01 |  Successfully disconnected from MD01 Controller"
+        #print self.getTimeStampGMT() + "MD01 |  Successfully disconnected from MD01 Controller"
         return self.connected
     
     def get_status(self):
         #get azimuth and elevation feedback from md01
         if self.connected == False:
-            self.printNotConnected('Get MD01 Status')
+            #self.printNotConnected('Get MD01 Status')
             return self.connected,0,0 #return -1 bad status, 0 for az, 0 for el
         else:
             try:
                 self.sock.send(self.status_cmd) 
                 self.feedback = self.recv_data()          
             except socket.error as msg:
-                print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-                print "Closing socket, Terminating program...."
+                #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                #print "Closing socket, Terminating program...."
                 self.sock.close()
                 self.connected = False
                 return self.connected, self.cur_az, self.cur_el
@@ -94,16 +94,17 @@ class md01(object):
     def set_stop(self):
         #stop md01 immediately
         if self.connected == False:
-            self.printNotConnected('Set Stop')
-            return -1, 0, 0
+            #self.printNotConnected('Set Stop')
+            return self.connected, 0, 0
         else:
             try:
                 self.sock.send(self.stop_cmd) 
                 self.feedback = self.recv_data()          
             except socket.error as msg:
-                print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-                print "Closing socket, Terminating program...."
+                #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                #print "Closing socket, Terminating program...."
                 self.sock.close()
+                self.connected = False
                 return self.connected, self.cur_az, self.cur_el
             self.convert_feedback()
             return self.connected, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
@@ -114,15 +115,17 @@ class md01(object):
         self.cmd_el = el
         self.format_set_cmd()
         if self.connected == False:
-            self.printNotConnected('Set Position')
-            return -1
+            #self.printNotConnected('Set Position')
+            return self.connected
         else:
             try:
                 self.sock.send(self.set_cmd) 
             except socket.error as msg:
-                print "Exception Thrown: " + str(msg)
-                print "Closing socket, Terminating program...."
+                #print "Exception Thrown: " + str(msg)
+                #print "Closing socket, Terminating program...."
                 self.sock.close()
+                self.connected = False
+                return self.connected
                 sys.exit()
 
     def recv_data(self):

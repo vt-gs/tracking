@@ -77,8 +77,6 @@ class Main_Thread(threading.Thread):
                 print az, el
             elif self.req.cmd == 'STOP':
                 thr.set_stop()
-        
-    
 
     def Check_Request(self, data):
         fields = data.split(" ")
