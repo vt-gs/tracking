@@ -36,6 +36,8 @@ class MainWindow(QtGui.QWidget):
         self.connected   = False  #Status of TCP/IP connection to MD-01
         self.update_rate = 250    #Feedback Query Auto Update Interval in milliseconds
 
+        self.ssid = 'VUL'
+
         self.initUI()
         self.darken()
         self.setFocus()
@@ -45,7 +47,7 @@ class MainWindow(QtGui.QWidget):
         self.initAzimuth()
         self.initElevation()
         self.initControls()
-        self.initNet()
+        self.initSSID()
         self.connectSignals()
     
     def setCallback(self, callback):
@@ -68,17 +70,56 @@ class MainWindow(QtGui.QWidget):
         self.elMinusTenButton.clicked.connect(self.elMinusTenButtonClicked) 
         self.elTextBox.returnPressed.connect(self.elTextBoxReturnPressed)
 
-        #self.connectButton.clicked.connect(self.connectButtonEvent)
         self.queryButton.clicked.connect(self.queryButtonEvent) 
         self.stopButton.clicked.connect(self.stopButtonEvent) 
         self.homeButton.clicked.connect(self.homeButtonEvent)
         self.updateButton.clicked.connect(self.updateButtonEvent)  
         self.autoQuery_cb.stateChanged.connect(self.catchAutoQueryEvent)
 
+        self.vul_rb.clicked.connect(self.updateSSIDButtonEvent)
+        self.dish_3m0_rb.clicked.connect(self.updateSSIDButtonEvent)
+        self.dish_4m5_rb.clicked.connect(self.updateSSIDButtonEvent)
+        self.wx_rb.clicked.connect(self.updateSSIDButtonEvent)
+
         QtCore.QObject.connect(self.updateTimer, QtCore.SIGNAL('timeout()'), self.queryButtonEvent)
         QtCore.QObject.connect(self.update_rate_le, QtCore.SIGNAL('editingFinished()'), self.updateRate)
-        #QtCore.QObject.connect(self.ipAddrTextBox, QtCore.SIGNAL('editingFinished()'), self.updateIPAddress)
-        #QtCore.QObject.connect(self.portTextBox, QtCore.SIGNAL('editingFinished()'), self.updatePort)
+
+    def updateSSIDButtonEvent(self, e):
+        #vul_rb_state = self.vul_rb.isChecked
+        #dish_3m0_rb_state = self.vul_rb.isChecked
+        #dish_4m5_rb_state = self.vul_rb.isChecked
+        #wx_rb_state = self.vul_rb.isChecked
+        
+        if self.vul_rb.isChecked() == True:
+            self.ssid = 'VUL'
+            self.vul_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(255,102,0); color:rgb(255,255,255)}")
+            self.dish_3m0_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+        elif self.dish_3m0_rb.isChecked() == True:
+            self.ssid = '3M0'
+            self.vul_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_3m0_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(255,102,0); color:rgb(255,255,255)}")
+            self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+        elif self.dish_4m5_rb.isChecked() == True:
+            self.ssid = '4M5'
+            self.vul_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_3m0_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(255,102,0); color:rgb(255,255,255)}")
+            self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+        elif self.wx_rb.isChecked() == True:
+            self.ssid = 'WX'
+            self.vul_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_3m0_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
+            self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(255,102,0); color:rgb(255,255,255)}")
+        #print vul_rb_state, dish_3m0_rb_state, dish_4m5_rb_state, wx_rb_state
+        print self.ssid
+
+        #self.callback.updateSSID(self.ssid)
+
+
 
     def updateButtonEvent(self):
         self.updateAzimuth()
@@ -97,8 +138,10 @@ class MainWindow(QtGui.QWidget):
             self.el_compass.set_cur_el(self.cur_el)
 
     def queryButtonEvent(self):
-        status, self.cur_az, self.cur_el = self.callback.get_status()
-        if status != -1:
+        valid, cur_az, cur_el = self.callback.get_status()
+        if valid != False:
+            self.cur_az = cur_az
+            self.cur_el = cur_el
             self.az_compass.set_cur_az(self.cur_az)
             self.el_compass.set_cur_el(self.cur_el)
         else:
@@ -224,49 +267,35 @@ class MainWindow(QtGui.QWidget):
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def initSSID(self):
-        pass
+        self.vul_rb = QtGui.QRadioButton("VHF/UHF/L-Band Subsystem", self)  #Select VUL Antenna Subsystem
+        self.vul_rb.setStyleSheet("QRadioButton { font-size: 14px; \
+                                                    background-color:rgb(255,102,0); \
+                                                    selection-background-color:rgb(255,0,0); \
+                                                    color:rgb(255,255,255); }")
+        self.vul_rb.setChecked(True)
 
-    def initNet(self):
-        #self.ipAddrTextBox = QtGui.QLineEdit()
-        #self.ipAddrTextBox.setText(self.ip)
-        #self.ipAddrTextBox.setInputMask("000.000.000.000;")
-        #self.ipAddrTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        #self.ipAddrTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        #self.ipAddrTextBox.setMaxLength(15)
+        self.dish_3m0_rb = QtGui.QRadioButton("3.0m Dish Subsystem", self)  #Select 3.0m Dish Antenna Subsystem
+        self.dish_3m0_rb.setStyleSheet("QRadioButton { font-size: 14px; \
+                                                    background-color:rgb(102,0,0); \
+                                                    color:rgb(255,255,255); }")
 
-        #self.portTextBox = QtGui.QLineEdit()
-        #self.portTextBox.setText(str(self.port))
-        #self.port_validator = QtGui.QIntValidator()
-        #self.port_validator.setRange(0,65535)
-        #self.portTextBox.setValidator(self.port_validator)
-        #self.portTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        #self.portTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        #self.portTextBox.setMaxLength(5)
-        #self.portTextBox.setFixedWidth(50)
+        self.dish_4m5_rb = QtGui.QRadioButton("4.5m Dish Subsystem", self)  #Select 4.5m Dish Antenna Subsystem
+        self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; \
+                                                    background-color:rgb(102,0,0); \
+                                                    color:rgb(255,255,255); }")
+        self.wx_rb = QtGui.QRadioButton("NOAA WX-Sat Subsystem", self)  #Select NOAA WX-Sat Antenna Subsystem
+        self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; \
+                                                    background-color:rgb(102,0,0); \
+                                                    color:rgb(255,255,255); }")
 
-        label = QtGui.QLabel('Status:')
-        label.setAlignment(QtCore.Qt.AlignRight)
-        self.net_label = QtGui.QLabel('Disconnected')
-        self.net_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.net_label.setFixedWidth(150)
-
-        #self.connectButton = QtGui.QPushButton("Connect")
-        #self.net_label.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,0,0);}")
-
-        hbox1 = QtGui.QHBoxLayout()
-        #hbox1.addWidget(self.ipAddrTextBox)
-        #hbox1.addWidget(self.portTextBox)
-
-        hbox2 = QtGui.QHBoxLayout()
-        hbox2.addWidget(label)
-        hbox2.addWidget(self.net_label)
 
         vbox = QtGui.QVBoxLayout()
-        vbox.addLayout(hbox1)
-        #vbox.addWidget(self.connectButton)
-        vbox.addLayout(hbox2)
+        vbox.addWidget(self.vul_rb)
+        vbox.addWidget(self.dish_3m0_rb)
+        vbox.addWidget(self.dish_4m5_rb)
+        vbox.addWidget(self.wx_rb)
 
-        self.net_fr.setLayout(vbox)
+        self.ssid_fr.setLayout(vbox)
 
     def initControls(self):
         self.updateButton = QtGui.QPushButton("Update")
@@ -399,10 +428,10 @@ class MainWindow(QtGui.QWidget):
         self.button_fr.setFixedWidth(340)
         self.button_fr.setFixedHeight(100)
 
-        self.net_fr = QtGui.QFrame(self)
-        self.net_fr.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.net_fr.setFixedWidth(340)
-        self.net_fr.setFixedHeight(100)
+        self.ssid_fr = QtGui.QFrame(self)
+        self.ssid_fr.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.ssid_fr.setFixedWidth(340)
+        self.ssid_fr.setFixedHeight(100)
 
         vbox = QtGui.QVBoxLayout()
         hbox1 = QtGui.QHBoxLayout()
@@ -411,7 +440,7 @@ class MainWindow(QtGui.QWidget):
         hbox1.addWidget(self.az_fr)
         hbox1.addWidget(self.el_fr)
 
-        hbox2.addWidget(self.net_fr)
+        hbox2.addWidget(self.ssid_fr)
         hbox2.addWidget(self.button_fr)        
 
         vbox.addLayout(hbox1)

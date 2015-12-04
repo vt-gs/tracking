@@ -22,11 +22,11 @@ if __name__ == '__main__':
     #--------END Command Line option parser-------------------------------------------------
 
     #vhf_uhf_md01 = md01(options.ip, options.port)
-    #track = vtp(options.ip, options.port)
+    track = vtp(options.ip, options.port, 'VUL')
 
     app = QtGui.QApplication(sys.argv)
     win = MainWindow(options.ip, options.port)
-    #win.setCallback(track)
+    win.setCallback(track)
     win.show()
     sys.exit(app.exec_())
     sys.exit()
