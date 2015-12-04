@@ -42,6 +42,14 @@ class Main_Thread(threading.Thread):
         self.vul_thread.daemon = True
         self.vul_thread.start()
 
+        self.dish_3m0_thread = MD01_Thread('3M0', options.dish_3m0_ip, options.dish_3m0_port)
+        self.dish_3m0_thread.daemon = True
+        self.dish_3m0_thread.start()
+
+        self.dish_4m5_thread = MD01_Thread('4M5', options.dish_4m5_ip, options.dish_4m5_port)
+        self.dish_4m5_thread.daemon = True
+        self.dish_4m5_thread.start()
+
     def run(self):
         print self.utc_ts() + "Main Thread Started..."
         self.sock.bind((self.ip, self.port))
@@ -62,9 +70,9 @@ class Main_Thread(threading.Thread):
         if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
             self.Process_Command(self.vul_thread, data, addr)
         elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
-            pass
+            self.Process_Command(self.dish_3m0_thread, data, addr)
         elif self.req.ssid == '4M5': #4.5 m Dish Subsystem ID
-            pass
+            self.Process_Command(self.dish_4m5_thread, data, addr)
         elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
             pass
 
