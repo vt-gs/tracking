@@ -20,8 +20,6 @@ from md01_thread import *
 def getTimeStampGMT(self):
     return str(date.utcnow()) + " UTC | "
 
-
-
 class request(object):
     def __init__ (self, ssid = None, cmd = None, az = None, el = None):
         self.ssid   = ssid
@@ -40,7 +38,7 @@ class Main_Thread(threading.Thread):
         self.req    = request()
         self.valid  = False
 
-        self.vul_thread = MD01_Thread('VUL', options.vul_ip, options.vul_port, 2, 2)
+        self.vul_thread = MD01_Thread('VUL', options.vul_ip, options.vul_port)
         self.vul_thread.daemon = True
         self.vul_thread.start()
 
@@ -59,9 +57,6 @@ class Main_Thread(threading.Thread):
             #fields = data.split(" ")
             #print len(fields), fields
         sys.exit()
-
-    
-        
 
     def Process_Request(self, data, addr):
         if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
@@ -85,7 +80,9 @@ class Main_Thread(threading.Thread):
                 #print az, el
             elif self.req.cmd == 'STOP':
                 thr.set_stop()
+                time.sleep(0.01)
                 az, el = thr.get_position()
+            
         self.Send_Feedback(thr, az, el, data, addr)
 
     def Send_Feedback(self,thr, az, el, data, addr):

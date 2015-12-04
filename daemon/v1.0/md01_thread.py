@@ -19,7 +19,7 @@ def getTimeStampGMT(self):
     return str(date.utcnow()) + " GMT | "
 
 class MD01_Thread(threading.Thread):
-    def __init__ (self, ssid,ip, port, az_thresh, el_thresh):
+    def __init__ (self, ssid,ip, port, az_thresh=2, el_thresh=2):
         threading.Thread.__init__(self)
         self._stop  = threading.Event()
         self.ssid   = ssid
@@ -37,9 +37,12 @@ class MD01_Thread(threading.Thread):
         self.tar_az     = 0.0
         self.tar_el     = 0.0
 
-        self.motion = False #indicates antennas in motion
-        self.motion_fault  = False #indicates antenna motion fault.
-        self.thread_fault  = False #indicates unknown failure in thread
+        self.az_motion      = False #indicates azimuth motion
+        self.el_motion      = False #indicates Elevation motion
+        self.az_motion_fault  = False #indicates antenna motion fault.
+        self.el_motion_fault  = False #indicates antenna motion fault.
+        self.thread_fault   = False #indicates unknown failure in thread
+        self.thread_dormant = False
 
 
     def run(self):
@@ -62,8 +65,17 @@ class MD01_Thread(threading.Thread):
                     else:
                         az_delta = abs(self.cur_az - self.last_az)
                         el_delta = abs(self.cur_el - self.last_el)
-                        if az_delta > self.az_thresh:  self.Antenna_Motion_Fault()
-                        elif el_delta > self.el_thresh:  self.Antenna_Motion_Fault()
+
+                        if az_delta > 0: self.az_motion = True
+                        else: self.az_motion = False
+
+                        if el_delta > 0: self.el_motion = True
+                        else: self.el_motion = False
+
+                        if az_delta > self.az_thresh: self.az_motion_fault = True
+                        if el_delta > self.el_thresh: self.el_motion_fault = True
+
+                        if ((self.az_motion_fault == True) or (self.el_motion_fault)): self.Antenna_Motion_Fault()
                         else:
                             self.last_az = self.cur_az
                             self.last_el = self.cur_el
@@ -74,15 +86,28 @@ class MD01_Thread(threading.Thread):
                 self.connected = False
                 self.thread_fault = True
 
+        print self.utc_ts() + self.ssid + " Thread is now Dormant"
+        self.thread_dormant = True
         while 1:
-            time.sleep(1)
+            time.sleep(10)
 
     def Antenna_Motion_Fault(self):
-        self.motion_fault = True
         print self.utc_ts() + "----ERROR! ERROR! ERROR!----"
-        print self.utc_ts() + "Antenna Motion Fault in " + str(self.ssid) + " Thread"
+        if self.az_motion_fault == True:
+            print self.utc_ts() + "Antenna Azimuth Motion Fault in " + str(self.ssid) + " Thread"
+        if self.el_motion_fault == True:
+            print self.utc_ts() + "Antenna Elevation Motion Fault in " + str(self.ssid) + " Thread"
         print self.utc_ts() + "Killing Thread Now..."
         self.stop_thread()
+
+    def get_thread_state(self):
+        state = {}
+        state['connected']  = self.connected
+        state['dormant']    = self.thread_dormant
+        state['az_motion']  = self.az_motion_fault
+        state['el_motion']  = self.el_motion_fault
+        state['thread']     = self.thread_fault
+        return state
 
     def get_position(self):
         return self.cur_az, self.cur_el
@@ -96,14 +121,12 @@ class MD01_Thread(threading.Thread):
         return str(date.utcnow()) + " UTC | "
 
     def set_stop(self):
-        self.motion = False
         self.md01.set_stop()
 
     def stop_thread(self):
         self.md01.set_stop()
-        self.md01.disconnect()
+        self.connected = self.md01.disconnect()
         self._stop.set()
-        sys.quit()
 
     def stopped(self):
         return self._stop.isSet()
