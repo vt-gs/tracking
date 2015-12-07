@@ -71,19 +71,20 @@ class MD01_Thread(threading.Thread):
                     if self.connected == False:
                         print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
                     else:
-                        az_delta = abs(self.cur_az - self.last_az)
-                        el_delta = abs(self.cur_el - self.last_el)
                         time_delta = (self.cur_time - self.last_time).total_seconds()
+                        az_delta = (self.cur_az - self.last_az) / time_delta
+                        el_delta = (self.cur_el - self.last_el) / time_delta
+                        
                         #print self.last_time, self.cur_time, str(time_delta)
-                        #print az_delta, el_delta, az_delta * (1.0/time_delta), el_delta * (1.0/time_delta)
-                        if az_delta > 0: self.az_motion = True
+                        #print az_delta, el_delta#, az_delta * (1.0/time_delta), el_delta * (1.0/time_delta)
+                        if abs(az_delta) > 0: self.az_motion = True
                         else: self.az_motion = False
 
-                        if el_delta > 0: self.el_motion = True
+                        if abs(el_delta) > 0: self.el_motion = True
                         else: self.el_motion = False
 
-                        if az_delta > self.az_thresh: self.az_motion_fault = True
-                        if el_delta > self.el_thresh: self.el_motion_fault = True
+                        if abs(az_delta) > self.az_thresh: self.az_motion_fault = True
+                        if abs(el_delta) > self.el_thresh: self.el_motion_fault = True
 
                         if ((self.az_motion_fault == True) or (self.el_motion_fault)): self.Antenna_Motion_Fault()
                         else:
