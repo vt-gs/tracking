@@ -52,7 +52,7 @@ class MD01_Thread(threading.Thread):
             try:
                 if self.connected == False: 
                     self.connected = self.md01.connect()
-                    time.sleep(1)
+                    time.sleep(5)
                     if self.connected == True:
                         print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
@@ -80,7 +80,7 @@ class MD01_Thread(threading.Thread):
                             self.last_az = self.cur_az
                             self.last_el = self.cur_el
                             #print az_delta, el_delta
-                        time.sleep(1)
+                        time.sleep(0.250)
             except:
                 print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
                 self.connected = False

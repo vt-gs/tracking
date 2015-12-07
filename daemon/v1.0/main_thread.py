@@ -102,7 +102,7 @@ class Main_Thread(threading.Thread):
 
     def Check_Request(self, data):
         fields = data.split(" ")
-        print fields
+        #print fields
         #Check number of fields        
         if ((len(fields) == 2) or (len(fields) == 4)):
             try:
