@@ -39,6 +39,7 @@ class MainWindow(QtGui.QWidget):
         self.ssid = 'VUL'
 
         self.initUI()
+        self.autoQuery_cb.setCheckState(QtCore.Qt.Checked)
         self.darken()
         self.setFocus()
 
