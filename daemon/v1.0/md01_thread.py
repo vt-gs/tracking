@@ -74,8 +74,8 @@ class MD01_Thread(threading.Thread):
                         az_delta = abs(self.cur_az - self.last_az)
                         el_delta = abs(self.cur_el - self.last_el)
                         time_delta = (self.cur_time - self.last_time).total_seconds()
-                        print self.last_time, self.cur_time, str(time_delta)
-                        print az_delta, el_delta, az_delta * (1.0/time_delta), el_delta * (1.0/time_delta)
+                        #print self.last_time, self.cur_time, str(time_delta)
+                        #print az_delta, el_delta, az_delta * (1.0/time_delta), el_delta * (1.0/time_delta)
                         if az_delta > 0: self.az_motion = True
                         else: self.az_motion = False
 
