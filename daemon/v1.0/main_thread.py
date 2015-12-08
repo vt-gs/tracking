@@ -37,6 +37,7 @@ class Main_Thread(threading.Thread):
 
         self.req    = request()
         self.valid  = False
+        self.lock   = threading.Lock()
 
         self.vul_thread = MD01_Thread('VUL', options.vul_ip, options.vul_port)
         self.vul_thread.daemon = True
@@ -57,16 +58,14 @@ class Main_Thread(threading.Thread):
         print self.utc_ts() + "Main Thread Started..."
         self.sock.bind((self.ip, self.port))
         while (not self._stop.isSet()):
+            #self.lock.acquire()
             data, addr = self.sock.recvfrom(1024) # buffer size is 1024 bytes
             #print self.utc_ts() + "   received from:", addr
             #print self.utc_ts() + "received message:", data
             self.valid = self.Check_Request(data)
             if self.valid == True:
-                #Valid Request Received, process appropriately
-                #print self.req.ssid, self.req.cmd, self.req.az, self.req.el
                 self.Process_Request(data, addr)
-            #fields = data.split(" ")
-            #print len(fields), fields
+            #self.lock.release()
         sys.exit()
 
     def Process_Request(self, data, addr):

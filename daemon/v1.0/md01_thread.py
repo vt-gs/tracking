@@ -13,15 +13,17 @@ import math
 import sys
 import string
 import time
+import inspect
 from md01 import *
 
 def getTimeStampGMT(self):
     return str(date.utcnow()) + " GMT | "
 
 class MD01_Thread(threading.Thread):
-    def __init__ (self, ssid,ip, port, az_thresh=3.0, el_thresh=3.0):
+    def __init__ (self, ssid,ip, port, az_thresh=3.5, el_thresh=3.5):
         threading.Thread.__init__(self)
         self._stop  = threading.Event()
+        self.lock   = threading.Lock()
         self.ssid   = ssid
         self.md01   = md01(ip, port)
         self.connected = False
@@ -59,21 +61,30 @@ class MD01_Thread(threading.Thread):
         while (not self._stop.isSet()):
             try:
                 if self.connected == False: 
+                    #self.lock.acquire()
+                    #caller = inspect.getouterframes(inspect.currentframe())#[1][3]
+                    #print caller
                     self.connected = self.md01.connect()
+                    #self.lock.release()
                     time.sleep(5)
                     if self.connected == True:
+                        #self.lock.acquire()
                         print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
                         self.last_time = date.utcnow()
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
                         #print self.last_az, self.last_el
+                        #self.lock.release()
                         time.sleep(1)
-                        
                 elif self.connected == True:
+                    #self.lock.acquire()
+                    #caller = inspect.getouterframes(inspect.currentframe())#[1][3]
+                    #print caller
                     self.cur_time = date.utcnow()
                     #delta = (now - last).total_seconds
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
                     if self.connected == False:
                         print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
+                        #self.lock.release()
                     else:
                         self.time_delta = (self.cur_time - self.last_time).total_seconds()
                         self.az_delta = (self.cur_az - self.last_az) / self.time_delta
@@ -96,6 +107,7 @@ class MD01_Thread(threading.Thread):
                             self.last_el = self.cur_el
                             self.last_time = self.cur_time
                             #print az_delta, el_delta
+                        #self.lock.release()
                         time.sleep(0.250)
             except:
                 print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
@@ -133,9 +145,11 @@ class MD01_Thread(threading.Thread):
         return self.cur_az, self.cur_el
 
     def set_position(self, az, el):
+        #self.lock.acquire()
         self.tar_az = az
         self.tar_el = el
         self.md01.set_position(self.tar_az, self.tar_el)
+        #self.lock.release()
 
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | "
