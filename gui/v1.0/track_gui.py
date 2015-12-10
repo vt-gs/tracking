@@ -116,21 +116,20 @@ class MainWindow(QtGui.QWidget):
             self.dish_4m5_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(102,0,0); color:rgb(255,255,255)}")
             self.wx_rb.setStyleSheet("QRadioButton { font-size: 14px; background-color:rgb(255,102,0); color:rgb(255,255,255)}")
         #print vul_rb_state, dish_3m0_rb_state, dish_4m5_rb_state, wx_rb_state
-        print self.ssid
-
-        #self.callback.updateSSID(self.ssid)
-
-
+        print self.getTimeStampGMT() + "GUI|  Updated Subsystem ID: ", self.ssid
+        self.callback.set_ssid(self.ssid)
 
     def updateButtonEvent(self):
         self.updateAzimuth()
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def homeButtonEvent(self):
         self.tar_az = self.home_az
         self.tar_el = self.home_el
         self.updateAzimuth()
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def stopButtonEvent(self):
         status, self.cur_az, self.cur_el = self.callback.set_stop()
@@ -194,30 +193,37 @@ class MainWindow(QtGui.QWidget):
     def azTextBoxReturnPressed(self):
         self.tar_az = float(self.azTextBox.text())
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
     
     def azPlusPtOneButtonClicked(self):
         self.tar_az = self.tar_az + 0.1
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def azPlusOneButtonClicked(self):
         self.tar_az = self.tar_az + 1
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def azPlusTenButtonClicked(self):
         self.tar_az = self.tar_az + 10
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusPtOneButtonClicked(self):
         self.tar_az = self.tar_az - 0.1
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusOneButtonClicked(self):
         self.tar_az = self.tar_az - 1
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusTenButtonClicked(self):
         self.tar_az = self.tar_az - 10
         self.updateAzimuth()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def updateAzimuth(self):
         if self.tar_az < -180: 
@@ -227,35 +233,42 @@ class MainWindow(QtGui.QWidget):
             self.tar_az = 540
             self.azTextBox.setText(str(self.tar_az))
         self.az_compass.set_tar_az(self.tar_az)
-        self.callback.set_position(self.tar_az, self.tar_el)
+        #self.callback.set_position(self.tar_az, self.tar_el)
 
     def elTextBoxReturnPressed(self):
         self.tar_el = float(self.elTextBox.text())
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
     
     def elPlusPtOneButtonClicked(self):
         self.tar_el = self.tar_el + 0.1
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def elPlusOneButtonClicked(self):
         self.tar_el = self.tar_el + 1
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def elPlusTenButtonClicked(self):
         self.tar_el = self.tar_el + 10
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusPtOneButtonClicked(self):
         self.tar_el = self.tar_el - 0.1
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusOneButtonClicked(self):
         self.tar_el = self.tar_el - 1
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusTenButtonClicked(self):
         self.tar_el = self.tar_el - 10
         self.updateElevation()
+        self.callback.set_position(self.tar_az, self.tar_el)
 
     def updateElevation(self):
         if self.tar_el < 0: 
@@ -265,7 +278,7 @@ class MainWindow(QtGui.QWidget):
             self.tar_el = 180
             self.elTextBox.setText(str(self.tar_el))
         self.el_compass.set_tar_el(self.tar_el)
-        self.callback.set_position(self.tar_az, self.tar_el)
+        #self.callback.set_position(self.tar_az, self.tar_el)
 
     def initSSID(self):
         self.vul_rb = QtGui.QRadioButton("VHF/UHF/L-Band Subsystem", self)  #Select VUL Antenna Subsystem

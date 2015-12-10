@@ -51,6 +51,7 @@ class vtp(object):
 
     def set_ssid(self, ssid):
         self.ssid = ssid
+        self.tx_frame.ssid = ssid
 
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | "
@@ -95,6 +96,7 @@ class vtp(object):
         try:
             #msg = self.ssid + " " + self.cmd + " " + self.cmd_az + " " + self.cmd_el
             msg = "{} {} {} {}".format(self.tx_frame.ssid, self.tx_frame.cmd, self.cmd_az, self.cmd_el)
+            print msg
             self.sock.sendto(msg, (self.ip, self.port))
             self.feedback, addr = self.sock.recvfrom(1024)   
             self.fb_frame.valid = self.Validate_Feedback() 
