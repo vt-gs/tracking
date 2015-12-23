@@ -95,7 +95,7 @@ class vtp(object):
         self.format_set_cmd()
         try:
             #msg = self.ssid + " " + self.cmd + " " + self.cmd_az + " " + self.cmd_el
-            msg = "{} {} {} {}".format(self.tx_frame.ssid, self.tx_frame.cmd, self.cmd_az, self.cmd_el)
+            msg = "{} {} {} {}".format(self.tx_frame.ssid, self.tx_frame.cmd, round(self.cmd_az,1), round(self.cmd_el,1))
             print msg
             self.sock.sendto(msg, (self.ip, self.port))
             self.feedback, addr = self.sock.recvfrom(1024)   

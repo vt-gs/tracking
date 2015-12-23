@@ -191,37 +191,37 @@ class MainWindow(QtGui.QWidget):
         self.port = self.portTextBox.text()
 
     def azTextBoxReturnPressed(self):
-        self.tar_az = float(self.azTextBox.text())
+        self.tar_az = round(float(self.azTextBox.text()),1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
     
     def azPlusPtOneButtonClicked(self):
-        self.tar_az = self.tar_az + 0.1
+        self.tar_az = round(self.tar_az + 0.1,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def azPlusOneButtonClicked(self):
-        self.tar_az = self.tar_az + 1
+        self.tar_az = round(self.tar_az + 1,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def azPlusTenButtonClicked(self):
-        self.tar_az = self.tar_az + 10
+        self.tar_az = round(self.tar_az + 10,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusPtOneButtonClicked(self):
-        self.tar_az = self.tar_az - 0.1
+        self.tar_az = round(self.tar_az - 0.1,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusOneButtonClicked(self):
-        self.tar_az = self.tar_az - 1
+        self.tar_az = round(self.tar_az - 1,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def azMinusTenButtonClicked(self):
-        self.tar_az = self.tar_az - 10
+        self.tar_az = round(self.tar_az - 10,1)
         self.updateAzimuth()
         self.callback.set_position(self.tar_az, self.tar_el)
 
@@ -236,37 +236,37 @@ class MainWindow(QtGui.QWidget):
         #self.callback.set_position(self.tar_az, self.tar_el)
 
     def elTextBoxReturnPressed(self):
-        self.tar_el = float(self.elTextBox.text())
+        self.tar_el = round(float(self.elTextBox.text()),1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
     
     def elPlusPtOneButtonClicked(self):
-        self.tar_el = self.tar_el + 0.1
+        self.tar_el = round(self.tar_el + 0.1,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def elPlusOneButtonClicked(self):
-        self.tar_el = self.tar_el + 1
+        self.tar_el = round(self.tar_el + 1,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def elPlusTenButtonClicked(self):
-        self.tar_el = self.tar_el + 10
+        self.tar_el = round(self.tar_el + 10,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusPtOneButtonClicked(self):
-        self.tar_el = self.tar_el - 0.1
+        self.tar_el = round(self.tar_el - 0.1,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusOneButtonClicked(self):
-        self.tar_el = self.tar_el - 1
+        self.tar_el = round(self.tar_el - 1,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
     def elMinusTenButtonClicked(self):
-        self.tar_el = self.tar_el - 10
+        self.tar_el = round(self.tar_el - 10,1)
         self.updateElevation()
         self.callback.set_position(self.tar_az, self.tar_el)
 
