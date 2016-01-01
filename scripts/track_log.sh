@@ -7,8 +7,8 @@ FILENAME=$DATETIME'_tracking_daemon.log'
 #echo $FILENAME
 #cp /var/log/upstart/relay_daemon.log /mnt/log/relay/$FILENAME
 cd /var/log/upstart
-cp tracking_daemon.log /scripts/$FILENAME
-cd /scripts
+cp tracking_daemon.log /vtgs/scripts/$FILENAME
+cd /vtgs/scripts
 tar -zcpf /mnt/log/tracking/$FILENAME'.tar.gz'  ./$FILENAME
 chmod 666 /mnt/log/tracking/$FILENAME'.tar.gz'
 rm ./$FILENAME
