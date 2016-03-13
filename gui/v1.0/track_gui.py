@@ -29,7 +29,7 @@ class MainWindow(QtGui.QWidget):
         self.tar_az = 0
         self.cur_el = 0
         self.tar_el = 0
-        self.home_az = 0.0
+        self.home_az = 180.0
         self.home_el = 0.0
 
         self.callback    = None   #Callback accessor for tracking control
