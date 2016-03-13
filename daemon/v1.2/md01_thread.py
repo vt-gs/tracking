@@ -42,7 +42,7 @@ class MD01_Thread(threading.Thread):
         self.az_thresh  = az_thresh     #Azimuth Speed threshold, for error detection, deg/s
         self.el_thresh  = el_thresh     #Elevation Speed threshold, for error detection, deg/s
 
-        self.tar_az     = 0.0
+        self.tar_az     = 180.0
         self.tar_el     = 0.0
 
         self.az_motion      = False #indicates azimuth motion
@@ -90,7 +90,7 @@ class MD01_Thread(threading.Thread):
                         if abs(self.az_delta) > self.az_thresh: self.az_motion_fault = True
                         if abs(self.el_delta) > self.el_thresh: self.el_motion_fault = True
 
-                        if ((self.az_motion_fault == True) or (self.el_motion_fault)): 
+                        if ((self.az_motion_fault) or (self.el_motion_fault)): 
                             self.Antenna_Motion_Fault()
                             set_flag = 0
                         else:
@@ -101,8 +101,8 @@ class MD01_Thread(threading.Thread):
                             if set_flag == 4:
                                 set_flag = 0
                                 if ((round(self.cur_az,1) != round(self.tar_az,1)) or (round(self.cur_el,1) != round(self.tar_el,1))):
-                                    #print "  Azimuth:", self.az_delta, self.cur_az, self.tar_az
-                                    #print "Elevation:", self.el_delta, self.cur_el, self.tar_el
+                                    print "  Azimuth:", self.az_delta, self.cur_az, self.tar_az
+                                    print "Elevation:", self.el_delta, self.cur_el, self.tar_el
                                     self.md01.set_position(self.tar_az, self.tar_el)
                         time.sleep(0.250)
             except:

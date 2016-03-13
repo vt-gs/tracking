@@ -142,9 +142,8 @@ class Main_Thread(threading.Thread):
         return str(date.utcnow()) + " UTC | "
 
     def stop(self):
-        self.gps_ser.close()
         self._stop.set()
-        sys.quit()
+        sys.exit()
 
     def stopped(self):
         return self._stop.isSet()
