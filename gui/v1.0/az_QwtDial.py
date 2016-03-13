@@ -51,7 +51,7 @@ class az_QwtDial(Qwt.QwtDial):
         self.setFrameShadow(Qwt.QwtDial.Plain)
         self.needle.setWidth(4)
         self.setNeedle(self.needle)
-        self.setValue(0)
+        self.setValue(180)
         self.setScaleTicks(5,10,15,1)
         self.setStyleSheet("Qlabel {font-size:14px;}")
 
@@ -107,7 +107,7 @@ class overlayAzQwtDial(Qwt.QwtDial):
         self.setFrameShadow(Qwt.QwtDial.Plain)
         self.needle.setWidth(2)
         self.setNeedle(self.needle)
-        self.setValue(0)
+        self.setValue(180)
         self.setScaleTicks(5,10,15,1)
         self.setStyleSheet("Qlabel {font-size:14px;}")
 

@@ -30,7 +30,7 @@ class vtp(object):
         self.port       = port      #Port number of MD01 Controller
         self.timeout    = timeout   #Socket Timeout interval, default = 1.0 seconds
 
-        self.cmd_az     = 0         #Commanded Azimuth, used in Set Position Command
+        self.cmd_az     = 180.0         #Commanded Azimuth, used in Set Position Command
         self.cmd_el     = 0         #Commanded Elevation, used in Set Position command
         self.cur_az     = 0         #  Current Azimuth, in degrees, from feedback
         self.cur_el     = 0         #Current Elevation, in degrees, from feedback

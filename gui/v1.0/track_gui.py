@@ -26,7 +26,7 @@ class MainWindow(QtGui.QWidget):
         self.port = port
 
         self.cur_az = 0
-        self.tar_az = 0
+        self.tar_az = 180.0
         self.cur_el = 0
         self.tar_el = 0
         self.home_az = 180.0
