@@ -28,9 +28,9 @@ class md01(object):
         self.timeout    = timeout   #Socket Timeout interval, default = 1.0 seconds
         self.connected  = False
         self.retries    = retries   #Number of times to attempt reconnection, default = 2
-        self.cmd_az     = 0         #Commanded Azimuth, used in Set Position Command
+        self.cmd_az     = 180         #Commanded Azimuth, used in Set Position Command
         self.cmd_el     = 0         #Commanded Elevation, used in Set Position command
-        self.cur_az     = 0         #  Current Azimuth, in degrees, from feedback
+        self.cur_az     = 180         #  Current Azimuth, in degrees, from feedback
         self.cur_el     = 0         #Current Elevation, in degrees, from feedback
         self.ph         = 10        #  Azimuth Resolution, in pulses per degree, from feedback, default = 10
         self.pv         = 10        #Elevation Resolution, in pulses per degree, from feedback, default = 10
