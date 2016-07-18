@@ -72,8 +72,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def initTimers(self):
         self.updateTimer = QtCore.QTimer(self)
-        self.updateTimer.setInterval(self.update_rate)
-        self.updateTimer.start()
+        #self.updateTimer.setInterval(self.update_rate)
+        self.updateTimer.start(self.update_rate)
 
         #Timer used to Poll the GPredict Server thread for updates
         self.predictTimer = QtCore.QTimer(self)

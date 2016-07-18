@@ -42,7 +42,7 @@ class MD01_Thread(threading.Thread):
         self.az_thresh  = az_thresh     #Azimuth Speed threshold, for error detection, deg/s
         self.el_thresh  = el_thresh     #Elevation Speed threshold, for error detection, deg/s
 
-        self.tar_az     = 0.0
+        self.tar_az     = 180.0
         self.tar_el     = 0.0
 
         self.az_motion      = False #indicates azimuth motion
@@ -55,7 +55,9 @@ class MD01_Thread(threading.Thread):
 
     def run(self):
         time.sleep(1)  #Give parent thread time to spool up
-        print self.utc_ts() + self.ssid + " Thread Started..."
+        print self.utc_ts() + self.ssid + " MD-01 Thread Started..."
+        print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
+        print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
         last = None
         now = None
         set_flag = 0
@@ -145,7 +147,7 @@ class MD01_Thread(threading.Thread):
         self.tar_el = el
 
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | "
+        return str(date.utcnow()) + " UTC | MD01-Thr | "
 
     def set_stop(self):
         self.tar_az = self.cur_az

@@ -33,18 +33,19 @@ class Main_Thread(threading.Thread):
         self._stop  = threading.Event()
         self.ip     = options.serv_ip
         self.port   = options.serv_port
+        self.ssid   = options.ssid
         self.sock   = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.req    = request()
         self.valid  = False
 
-        self.md01_thread = MD01_Thread('VUL', options.md01_ip, options.md01_port)
+        self.md01_thread = MD01_Thread('VUL', options.md01_ip, options.md01_port, options.az_thresh, options.el_thresh)
         self.md01_thread.daemon = True
         self.md01_thread.start()
         time.sleep(0.1)
 
     def run(self):
-        print self.utc_ts() + "Main Thread Started..."
+        print self.utc_ts() + self.ssid + " Main Thread Started..."
         self.sock.bind((self.ip, self.port))
         while (not self._stop.isSet()):
             #self.lock.acquire()
@@ -57,7 +58,8 @@ class Main_Thread(threading.Thread):
             #self.lock.release()
         sys.exit()
 
-    def Process_Request(self, data, addr):
+################# OLD PROCESS REQUEST FUNCTION #########################################
+    def Process_Request_OLD(self, data, addr):
         if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
             self.Process_Command(self.vul_thread, data, addr)
         elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
@@ -66,6 +68,12 @@ class Main_Thread(threading.Thread):
             self.Process_Command(self.dish_4m5_thread, data, addr)
         elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
             pass
+
+    def Process_Request(self, data, addr):
+        if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
+            self.Process_Command(self.md01_thread, data, addr)
+        else:
+            print self.utc_ts() + "This is the VUL Controller"
 
     def Process_Command(self, thr, data, addr):
         az = 0 
@@ -124,7 +132,7 @@ class Main_Thread(threading.Thread):
         return True
 
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | "
+        return str(date.utcnow()) + " UTC | MAIN-Thr | "
 
     def stop(self):
         self.gps_ser.close()

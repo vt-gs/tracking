@@ -42,7 +42,7 @@ class md01(object):
         return str(date.utcnow()) + " GMT | "
 
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | "
+        return str(date.utcnow()) + " UTC | MD01-Obj |"
 
     def connect(self):
         #connect to md01 controller
