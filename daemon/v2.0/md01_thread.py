@@ -20,7 +20,7 @@ def getTimeStampGMT(self):
     return str(date.utcnow()) + " GMT | "
 
 class MD01_Thread(threading.Thread):
-    def __init__ (self, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
+    def __init__ (self, parent, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
         self._stop  = threading.Event()
         self.lock   = threading.Lock()
@@ -51,11 +51,10 @@ class MD01_Thread(threading.Thread):
         self.el_motion_fault  = False #indicates antenna motion fault.
         self.thread_fault   = False #indicates unknown failure in thread
         self.thread_dormant = False
-
-
+    
     def run(self):
         time.sleep(1)  #Give parent thread time to spool up
-        print self.utc_ts() + self.ssid + " MD-01 Thread Started..."
+        print self.utc_ts() + self.ssid + " MD01 Thread Started..."
         print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
         print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
         last = None
@@ -65,12 +64,14 @@ class MD01_Thread(threading.Thread):
             try:
                 if self.connected == False: 
                     self.connected = self.md01.connect()
-                    time.sleep(5)
+                    #time.sleep(5)
                     if self.connected == True:
                         print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
                         self.last_time = date.utcnow()
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
                         time.sleep(1)
+                    else:
+                        time.sleep(5)
                 elif self.connected == True:
                     self.cur_time = date.utcnow()
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
@@ -133,14 +134,15 @@ class MD01_Thread(threading.Thread):
     def get_thread_state(self):
         state = {}
         state['connected']  = self.connected
-        state['dormant']    = self.thread_dormant
-        state['az_motion']  = self.az_motion_fault
-        state['el_motion']  = self.el_motion_fault
+        state['state']      = self.thread_dormant
         state['thread']     = self.thread_fault
         return state
 
     def get_position(self):
         return self.cur_az, self.cur_el
+
+    def get_connected(self):
+        return self.connected
 
     def set_position(self, az, el):
         self.tar_az = az
