@@ -19,14 +19,17 @@ from md01 import *
 def getTimeStampGMT(self):
     return str(date.utcnow()) + " GMT | "
 
-class MD01_Thread(threading.Thread):
-    def __init__ (self, parent, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
+class MD01Thread(threading.Thread):
+    def __init__ (self, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
         self._stop  = threading.Event()
         self.lock   = threading.Lock()
+        #self.parent = parent
         self.ssid   = ssid
         self.md01   = md01(ip, port)
         self.connected = False
+
+        self.callback = None # callback to Daemon Main Thread
 
         self.cur_az     = 0.0
         self.cur_el     = 0.0
@@ -36,8 +39,8 @@ class MD01_Thread(threading.Thread):
         self.last_el    = 0.0
         self.last_time  = None
 
-        self.az_delta   = 0.0
-        self.el_delta   = 0.0
+        self.az_rate   = 0.0
+        self.el_rate   = 0.0
         self.time_delta = 0.0
         self.az_thresh  = az_thresh     #Azimuth Speed threshold, for error detection, deg/s
         self.el_thresh  = el_thresh     #Elevation Speed threshold, for error detection, deg/s
@@ -53,7 +56,7 @@ class MD01_Thread(threading.Thread):
         self.thread_dormant = False
     
     def run(self):
-        time.sleep(1)  #Give parent thread time to spool up
+        #time.sleep(1)  #Give parent thread time to spool up
         print self.utc_ts() + self.ssid + " MD01 Thread Started..."
         print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
         print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
@@ -69,6 +72,7 @@ class MD01_Thread(threading.Thread):
                         print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
                         self.last_time = date.utcnow()
                         self.connected, self.last_az, self.last_el = self.md01.get_status()
+                        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
                         time.sleep(1)
                     else:
                         time.sleep(5)
@@ -77,21 +81,22 @@ class MD01_Thread(threading.Thread):
                     self.connected, self.cur_az, self.cur_el = self.md01.get_status()
                     if self.connected == False:
                         print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
+                        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
                         set_flag = 0
                     else:
                         
                         self.time_delta = (self.cur_time - self.last_time).total_seconds()
-                        self.az_delta = (self.cur_az - self.last_az) / self.time_delta
-                        self.el_delta = (self.cur_el - self.last_el) / self.time_delta
+                        self.az_rate = (self.cur_az - self.last_az) / self.time_delta
+                        self.el_rate = (self.cur_el - self.last_el) / self.time_delta
                         
-                        if abs(self.az_delta) > 0: self.az_motion = True
+                        if abs(self.az_rate) > 0: self.az_motion = True
                         else: self.az_motion = False
 
-                        if abs(self.el_delta) > 0: self.el_motion = True
+                        if abs(self.el_rate) > 0: self.el_motion = True
                         else: self.el_motion = False
 
-                        if abs(self.az_delta) > self.az_thresh: self.az_motion_fault = True
-                        if abs(self.el_delta) > self.el_thresh: self.el_motion_fault = True
+                        if abs(self.az_rate) > self.az_thresh: self.az_motion_fault = True
+                        if abs(self.el_rate) > self.el_thresh: self.el_motion_fault = True
 
                         if ((self.az_motion_fault == True) or (self.el_motion_fault)): 
                             self.Antenna_Motion_Fault()
@@ -104,8 +109,8 @@ class MD01_Thread(threading.Thread):
                             if set_flag == 4:
                                 set_flag = 0
                                 if ((round(self.cur_az,1) != round(self.tar_az,1)) or (round(self.cur_el,1) != round(self.tar_el,1))):
-                                    #print "  Azimuth:", self.az_delta, self.cur_az, self.tar_az
-                                    #print "Elevation:", self.el_delta, self.cur_el, self.tar_el
+                                    #print "  Azimuth:", self.az_rate, self.cur_az, self.tar_az
+                                    #print "Elevation:", self.el_rate, self.cur_el, self.tar_el
                                     self.md01.set_position(self.tar_az, self.tar_el)
                         time.sleep(0.250)
             except:
@@ -122,24 +127,20 @@ class MD01_Thread(threading.Thread):
         print self.utc_ts() + "----ERROR! ERROR! ERROR!----"
         if self.az_motion_fault == True:
             print self.utc_ts() + "Antenna Azimuth Motion Fault in " + str(self.ssid) + " Thread"
-            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.az_delta, self.az_thresh))
+            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.az_rate, self.az_thresh))
         if self.el_motion_fault == True:
             print self.utc_ts() + "Antenna Elevation Motion Fault in " + str(self.ssid) + " Thread"
-            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.el_delta, self.el_thresh))            
+            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.el_rate, self.el_thresh))            
         print self.utc_ts() + ("cur_az: %+3.2f, cur_el: %+3.2f, last_az: %+3.2f, last_el: %+3.2f, time_delta: %+3.1f [ms]" % \
                               (self.cur_az, self.cur_el, self.last_az, self.last_el, self.time_delta*1000))
         print self.utc_ts() + "Killing Thread Now..."
         self.stop_thread()
 
-    def get_thread_state(self):
-        state = {}
-        state['connected']  = self.connected
-        state['state']      = self.thread_dormant
-        state['thread']     = self.thread_fault
-        return state
-
     def get_position(self):
         return self.cur_az, self.cur_el
+
+    def get_rate(self):
+        return self.az_rate, self.el_rate
 
     def get_connected(self):
         return self.connected
@@ -148,8 +149,11 @@ class MD01_Thread(threading.Thread):
         self.tar_az = az
         self.tar_el = el
 
+    def set_callback(self, callback):
+        self.callback = callback
+
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | MD01-Thr | "
+        return str(date.utcnow()) + " UTC | MD01 | "
 
     def set_stop(self):
         self.tar_az = self.cur_az

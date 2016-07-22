@@ -23,7 +23,7 @@ import os
 import datetime
 
 from optparse import OptionParser
-from md01 import *
+from server_thread import *
 from main_thread import *
 
 if __name__ == '__main__':
@@ -49,12 +49,29 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
     #--------END Command Line option parser------------------------------------------------------    
 
-    serv = Main_Thread(options)
-    serv.daemon = True
-    serv.run()
+    #Start Data Server Thread
+    serv_thread = ServerThread(options.ssid, options.serv_ip, options.serv_port)
+    serv_thread.daemon = True
+    #serv.run()# blocking
+    serv_thread.start()# non-blocking
 
-    while 1:
-        pass
+    time.sleep(0.1)
+
+    #Start MD01 Thread
+    md01_thread = MD01Thread(options.ssid, options.md01_ip, options.md01_port, options.az_thresh, options.el_thresh)
+    md01_thread.daemon = True
+    md01_thread.start() #non-blocking
+
+    time.sleep(0.1)
+
+    #Start Main Thread
+    main = MainThread(options.ssid, serv_thread, md01_thread)
+    main.daemon = True
+
+    serv_thread.set_callback(main)
+    md01_thread.set_callback(main)
+    
+    main.run()#blocking
     sys.exit()
     
 

@@ -33,216 +33,127 @@ class request(object):
         self.az     = None
         self.el     = None
 
-class Main_Thread(threading.Thread):
-    def __init__ (self, options):
+class MainThread(threading.Thread):
+    def __init__ (self, ssid, serv_thr, md01_thr):
         threading.Thread.__init__(self)
         self._stop      = threading.Event()
-        self.ip         = options.serv_ip
-        self.port       = options.serv_port
-        self.ssid       = options.ssid
-        self.md01_ip    = options.md01_ip
-        self.md01_port  = options.md01_port
-        self.az_thresh  = options.az_thresh
-        self.el_thresh  = options.el_thresh
-        #self.sock      = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP Socket
-        self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #To allow socket reuse
-
-        self.req    = request()
-        self.valid  = 0     # 0=invalid, 1=Management Frame, 2=Antenna Frame
+        self.ssid       = ssid
 
         #### DAEMON STATE ####
         self.state  = 'IDLE'    #IDLE, STANDBY, ACTIVE, FAULT, CALIBRATE
         self.user_con = False
         self.md01_con = False
 
-        self.initThread()
+        self.md01_thr = md01_thr
+        self.serv_thr = serv_thr
 
-    def initThread(self):
-        self.md01_thread = MD01_Thread(self, self.ssid, self.md01_ip, self.md01_port, self.az_thresh, self.el_thresh)
-        self.md01_thread.daemon = True
-        self.md01_thread.start()
-        time.sleep(0.1)
+        self.active_watchdog = 0 #watchdog counter for active state, if
+        self.active_timeout  = 10 #watchdog counter for active state
+        self.active_user = None #current user of active session
 
     def run(self):
         print self.utc_ts() + self.ssid + " Main Thread Started..."
-        self.sock.bind((self.ip, self.port))
-        self.sock.listen(1)
-        self.Print_State()
+        self.print_state()
         while (not self._stop.isSet()): 
             if self.state == 'IDLE':
-                self.md01_con = self.md01_thread.get_connected()
-                if self.user_con == False: #user is not connected
-                    self.conn, self.addr = self.sock.accept()#Blocking
-                    print self.utc_ts() + "User connected from: " + str(self.addr)
-                    self.user_con = True
-                    if (self.user_con and self.md01_con): self.set_state_standby()
-                    else:  self.Print_State()
-                elif self.user_con == True:
-                    self.md01_con = self.md01_thread.get_connected()
-                    data = self.conn.recvfrom(1024)[0]
-                    if data:
-                        data = data.strip()
-                        print self.utc_ts() + "User Message: " + str(data)
-                        #print self.utc_ts() + "MD01 Connection Status: " + str(self.md01_con)
-                    else:
-                        print self.utc_ts() + "User disconnected from: " + str(self.addr)                        
-                        self.user_con = False
-                        self.Print_State()
-
-            elif self.state == 'STANDBY':
-                self.md01_con = self.md01_thread.get_connected()
-                
-                if self.md01_con == False: #user is not connected
-                    self.set_state_idle()
-
-                if self.user_con == True:
-                    data = self.conn.recvfrom(1024)[0]
-                    if data:
-                        data = data.strip()
-                        print self.utc_ts() + "User Message: " + str(data)
-                    else:
-                        print self.utc_ts() + "User disconnected from: " + str(self.addr)                        
-                        self.user_con = False
-                        self.set_state_idle()
-
-            elif self.state == 'ACTIVE':
                 pass
+            elif self.state == 'STANDBY':
+                pass
+            elif self.state == 'ACTIVE':
+                self.active_watchdog += 1
+                if self.active_watchdog >= self.active_timeout: #watchdog for active state, if no activity, switch to STANDBY
+                    print '{:s}ACTIVE session timeout ({:3.1f}s), User \'{:s}\', switching to STANDBY'.format(self.utc_ts(), self.active_timeout, self.active_user)
+                    self.set_state_standby()
+            elif self.state == 'FAULT':
+                pass
+            time.sleep(1)
+
+    #### FUNCTIONS CALLED BY SERVER THREAD ####
+    def set_user_con_status(self, con):
+        #Sets user connection status
+        self.user_con = con
+        self.check_con_status()
+    
+    def management_frame_received(self, parent, frame):
+        #Called from server thread when management frame received
+        if frame.cmd == 'START':  #initiate User Session
+            print '{:s}User \'{:s}\' requested session START'.format(self.utc_ts(), frame.uid)
+            if self.state == 'STANDBY':
+                self.set_state_active(frame.uid)
+        elif frame.cmd == 'STOP':  #initiate User Session
+            print '{:s}User \'{:s}\' requested session STOP'.format(self.utc_ts(), frame.uid)
+            if self.state == 'ACTIVE':
+                self.set_state_standby()
+        elif frame.cmd == 'QUERY':  #initiate User Session
+            print '{:s}User \'{:s}\' requested session QUERY'.format(self.utc_ts(), frame.uid)
+
+        parent.send_management_feedback(self.state)
+
+    def motion_frame_received(self, parent, frame):
+        #Called from server thread when motion frame received
+        if self.state == 'ACTIVE': #Motion commands only processed when daemon is ACTIVE
+            if frame.cmd == 'SET':  #SET TARGET AZ/EL
+                print '{:s}User \'{:s}\' requested MOTION SET: AZ={:3.1f}, EL={:3.1f}'.format(self.utc_ts(), frame.uid, frame.az, frame.el)
+                #MD01 Set target angles
+                #parent.send_motion_feedback(self.state)
+            elif frame.cmd == 'STOP':  #STOP ANTENNA MOTION
+                print '{:s}User \'{:s}\' requested MOTION STOP'.format(self.utc_ts(), frame.uid)
+                #MD01 set stop
+                #parent.send_motion_feedback(self.state)
+            elif frame.cmd == 'GET':  #QUERY ANTENNA POSITION
+                print '{:s}User \'{:s}\' requested MOTION QUERY'.format(self.utc_ts(), frame.uid)
+                #MD01 query
+            az, el, az_rate, el_rate = self.get_motion_state()
+            parent.send_motion_feedback(az, el, az_rate, el_rate)
+
+    def get_motion_state(self):
+        az, el   = self.md01_thr.get_position()
+        az_rate, el_rate = self.md01_thr.get_rate()
+        return az, el, az_rate, el_rate
+
+    #### FUNCTIONS CALLED BY MD01 THREAD ####
+    def set_md01_con_status(self, con):
+        #Sets user connection status
+        self.md01_con = con
+        self.check_con_status()
+        
+
+    #### FUNCTIONS CALLED LOCALLY ####
+    def check_con_status(self):
+        #Checks User and MD01 connection status
+        #sets daemon state accordingly
+        if   self.user_con == True: #user is connected
+            if self.md01_con == True: #MD01 is connected
+                if self.state == 'IDLE': #Daemon is in IDLE 
+                    self.set_state_standby()
+            if self.md01_con == False: #MD01 is not connected
+                if ((self.state == 'STANDBY') or (self.state == 'ACTIVE')):
+                    self.set_state_idle()
+        elif self.user_con == False: #user is not connected
+            if ((self.state == 'STANDBY') or (self.state == 'ACTIVE')):
+                self.set_state_idle()
+        
 
     def set_state_idle(self):
         self.state = 'IDLE'
-        self.Print_State()        
+        self.print_state()        
         
     def set_state_standby(self):
         self.state = 'STANDBY'
-        self.Print_State()
+        self.print_state()
 
-    def set_state_active(self):
-        pass
+    def set_state_active(self, user):
+        self.active_user = user
+        self.active_watchdog = 0
+        self.state = 'ACTIVE'
+        self.print_state()
 
-    def runold(self):
-        print self.utc_ts() + self.ssid + " Main Thread Started..."
-        print self.utc_ts() + self.ssid + " Daemon State: " + str(self.state)
-        self.sock.bind((self.ip, self.port))
-        self.sock.listen(1)
-        while (not self._stop.isSet()):   
-            if self.user_con == False: #user is not connected
-                self.conn, self.addr = self.sock.accept()#Blocking
-                print self.utc_ts() + "User connected from: " + str(self.addr)
-                self.user_con = True
-                self.md01_con = self.md01_thread.get_connected()
-                if (self.user_con and self.md01_con): self.state = 'STANDBY'  #Transition to STANDBY STATE
-                self.Print_State()
-            if self.user_con == True:
-                md01_old_con = self.md01_con
-                self.md01_con = self.md01_thread.get_connected()
-                if ((md01_old_con==False) and self.md01_con): self.Print_State()
-                if (self.user_con and self.md01_con): self.state = 'STANDBY'  #Transition to STANDBY STATE
-                data = self.conn.recvfrom(1024)[0]
-                if data:
-                    data = data.strip()
-                    print self.utc_ts() + "User Message: " + str(data)
-                    print self.utc_ts() + "MD01 Connection Status: " + str(self.md01_con)
-                    ##Process data command
-                else:
-                    print self.utc_ts() + "User disconnected from: " + str(self.addr)                        
-                    self.user_con = False
-                    self.state = "IDLE"
-                    self.Print_State()
-
-    def Print_State(self):
+    def print_state(self):
         print self.utc_ts() + "Connection Status (USER/MD01): " + str(self.user_con) + '/' + str(self.md01_con)
         print self.utc_ts() + self.ssid + " Daemon State: " + str(self.state)
-
-    def run_old(self):
-        print self.utc_ts() + self.ssid + " Main Thread Started..."
-        
-        while (not self._stop.isSet()):
-            if self.user_con == False: #user is not connected
-                self.conn, self.addr = self.sock.accept()
-                self.user_con = True
-                print self.utc_ts() + "New User Connected: " + str(self.addr)
-            elif self.user_con == True:
-                data, addr = self.conn.recvfrom(1024) # buffer size is 1024 bytes
-                if addr == None:
-                    self.sock.close()
-                    self.user_con = False
-                    print self.utc_ts() + "User Disconnected: "
-                else:
-                    print self.utc_ts() + "   received from:", addr
-                    print self.utc_ts() + "received message:", data
-                self.valid = self.Check_Request(data)
-                if self.valid == True:
-                    self.Process_Request(data, addr)
-        sys.exit()
-
-    def Check_Request(self, data):
-        fields = data.split(" ")
-        #print fields
-        #Check number of fields        
-        if ((len(fields) == 2) or (len(fields) == 4)):
-            try:
-                self.req = request(fields[0].strip('\n'), fields[1].strip('\n'))
-            except ValueError:
-                print self.utc_ts() + "Error: Invalid Command Data Types"
-                return False
-        else: 
-            print "Error | Invalid number of fields in command: ", len(fields) 
-            return False
-        #Validate Subsystem ID
-        if ((self.req.ssid != 'VUL') and (self.req.ssid != '3M0') and (self.req.ssid != '4M5') and (self.req.ssid != 'WX')):
-            print "Error | Invalid Subsystem ID Type: ", self.req.ssid
-            return False
-        #Validate Command Type
-        if ((self.req.cmd != 'SET') and (self.req.cmd != 'QUERY') and (self.req.cmd != 'STOP')):
-            print "Error | Invalid Command Type: ", self.req.cmd
-            return False
-        elif self.req.cmd == 'SET':
-            if len(fields) != 4:
-                print "Error | Invalid number of fields in command: ", len(fields) 
-                return False
-            
-            try:
-                self.req.az = float(fields[2].strip('\n'))
-                self.req.el = float(fields[3].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-
-        return True
-
-
-    def Process_Request(self, data, addr):
-        if   self.req.ssid == self.ssid: #VHF/UHF/L-Band subsystem ID
-            self.Process_Command(self.md01_thread, data, addr)
-        else:
-            print self.utc_ts() + "This is the VUL Controller"
-
-    def Process_Command(self, thr, data, addr):
-        az = 0 
-        el = 0
-        if thr.connected == True:
-            if   self.req.cmd == 'SET':
-                thr.set_position(self.req.az, self.req.el)
-                az, el = thr.get_position()
-            elif self.req.cmd == 'QUERY':
-                az, el = thr.get_position()
-                #print az, el
-            elif self.req.cmd == 'STOP':
-                thr.set_stop()
-                time.sleep(0.01)
-                az, el = thr.get_position()
-            
-        self.Send_Feedback(thr, az, el, data, addr)
-
-    def Send_Feedback(self,thr, az, el, data, addr):
-        msg = thr.ssid + " QUERY " + str(az) + " " + str(el) + "\n"
-        self.sock.sendto(msg, addr)
-
     
-
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | MAIN-Thr | "
+        return str(date.utcnow()) + " UTC | MAIN | "
 
     def stop(self):
         self.gps_ser.close()
@@ -251,62 +162,5 @@ class Main_Thread(threading.Thread):
 
     def stopped(self):
         return self._stop.isSet()
-
-################# OLD PROCESS REQUEST FUNCTION #########################################
-    def Process_Request_OLD(self, data, addr):
-        if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
-            self.Process_Command(self.vul_thread, data, addr)
-        elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
-            self.Process_Command(self.dish_3m0_thread, data, addr)
-        elif self.req.ssid == '4M5': #4.5 m Dish Subsystem ID
-            self.Process_Command(self.dish_4m5_thread, data, addr)
-        elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
-            pass
-
-################# OLD CHECK REQUEST FUNCTION #########################################
-    def Check_Request_OLD(self, data):
-        fields = data.split(" ")
-        #print fields
-        #Check number of fields        
-        if ((len(fields) == 2) or (len(fields) == 4)):
-            try:
-                self.req = request(fields[0].strip('\n'), fields[1].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-        else: 
-            print "Error | Invalid number of fields in command: ", len(fields) 
-            return False
-        #Validate Subsystem ID
-        if ((self.req.ssid != 'VUL') and (self.req.ssid != '3M0') and (self.req.ssid != '4M5') and (self.req.ssid != 'WX')):
-            print "Error | Invalid Subsystem ID Type: ", self.req.ssid
-            return False
-        #Validate Command Type
-        if ((self.req.cmd != 'SET') and (self.req.cmd != 'QUERY') and (self.req.cmd != 'STOP')):
-            print "Error | Invalid Command Type: ", self.req.cmd
-            return False
-        elif self.req.cmd == 'SET':
-            if len(fields) != 4:
-                print "Error | Invalid number of fields in command: ", len(fields) 
-                return False
-            
-            try:
-                self.req.az = float(fields[2].strip('\n'))
-                self.req.el = float(fields[3].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-
-        return True
-
-################# OLD REQUEST Object #########################################
-
-class request_old(object):
-    def __init__ (self, ssid = None, cmd = None, az = None, el = None):
-        self.ssid   = ssid
-        self.cmd    = cmd
-        self.az     = az
-        self.el     = el
-
 
 
