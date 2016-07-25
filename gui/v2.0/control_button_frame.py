@@ -13,18 +13,21 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4 import Qt
 import PyQt4.Qwt5 as Qwt
+from PyQt4.QtCore import pyqtSignal
 
 class control_button_frame(QtGui.QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, az_el = None):
         super(control_button_frame, self).__init__()
         self.parent = parent
+        self.az_el = az_el
         self.initUI()
 
     def initUI(self):
         self.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.initWidgets()
+        self.init_widgets()
+        self.connect_signals()
 
-    def initWidgets(self):
+    def init_widgets(self):
         self.MinusTenButton = QtGui.QPushButton(self)
         self.MinusTenButton.setText("-10.0")
         self.MinusTenButton.setMinimumWidth(45)
@@ -57,4 +60,17 @@ class control_button_frame(QtGui.QFrame):
         hbox1.addWidget(self.PlusOneButton)
         hbox1.addWidget(self.PlusTenButton)
         self.setLayout(hbox1)
+
+    def connect_signals(self):
+        self.PlusPtOneButton.clicked.connect(self.button_clicked) 
+        self.PlusOneButton.clicked.connect(self.button_clicked) 
+        self.PlusTenButton.clicked.connect(self.button_clicked) 
+        self.MinusPtOneButton.clicked.connect(self.button_clicked) 
+        self.MinusOneButton.clicked.connect(self.button_clicked) 
+        self.MinusTenButton.clicked.connect(self.button_clicked) 
+
+    def button_clicked(self):
+        sender = self.sender()
+        self.parent.increment_target_angle(self.az_el,float(sender.text()))        
+    
 

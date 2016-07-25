@@ -30,6 +30,7 @@ class MD01Thread(threading.Thread):
     def __init__ (self, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
         #self.parent = parent
+        self._stop      = threading.Event()
         self.ssid   = ssid
         self.md01   = md01(ip, port)
         self.connected = False

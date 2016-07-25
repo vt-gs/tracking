@@ -41,7 +41,7 @@ if __name__ == '__main__':
         print 'Exiting...'
         sys.exit()
 
-    track = vtp(options.ip, options.port, 'VUL', 2.0)
+    track = vtp(options.ip, options.port, options.uid, options.ssid, 2.0)
 
     app = QtGui.QApplication(sys.argv)
     win = MainWindow(options)

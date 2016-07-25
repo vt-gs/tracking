@@ -22,24 +22,10 @@ class overlayLabel(QtGui.QLabel):
         self.setFont(font)
         self.setText(text)
 
-class overlayLCD(QtGui.QLCDNumber):    
-    def __init__(self, parent=None, feedback_bool=0):        
-        super(overlayLCD, self).__init__(parent)
-        self.setSegmentStyle(QtGui.QLCDNumber.Flat)
-        palette = QtGui.QPalette(self.palette())
-        palette.setColor(palette.Background,QtCore.Qt.transparent)
-        if feedback_bool == 0: palette.setColor(palette.Foreground,QtGui.QColor(255,0,0))
-        elif feedback_bool == 1: palette.setColor(palette.Foreground,QtGui.QColor(0,0,255))
-        elif feedback_bool == 2: palette.setColor(palette.Foreground,QtGui.QColor(255,0,255))
-        self.setPalette(palette)
-        self.setFixedHeight(30)
-        self.setFixedWidth(85)
-        self.display(0)
-
 class el_QwtDial(Qwt.QwtDial):
-    def __init__(self, parent_grid):
-        super(el_QwtDial, self).__init__()
-        self.parent_grid = parent_grid
+    def __init__(self, parent=None):
+        super(el_QwtDial, self).__init__(parent)
+        self.parent = parent
         #self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Ray, 1, QtGui.QColor(255,0,0))
         self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Arrow, 1, QtGui.QColor(255,0,0))
         self.setOrigin(180)
@@ -62,43 +48,25 @@ class el_QwtDial(Qwt.QwtDial):
         palette.setColor(palette.Text,QtCore.Qt.green)
         self.setPalette(palette)
 
+        self.overlayDial = overlayElQwtDial(self.parent)
         self.title_label = overlayLabel(self, "Elevation")
-        self.overlayDial = overlayElQwtDial()
-        self.parent_grid.addWidget(self,0,0,30,30)
-        self.parent_grid.addWidget(self.overlayDial,0,0,30,30)
 
-        self.cur_label = overlayLabel(self, "Current", 15, 255,0,0,False, True)
-        self.cur_label.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignBottom)
-        self.parent_grid.addWidget(self.cur_label,27,0,1,1)
-
-        self.tar_label = overlayLabel(self, "Target", 15, 0,0,255,False,True)
-        self.tar_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignBottom)
-        self.parent_grid.addWidget(self.tar_label,27,29,1,1)
-
-        #self.rate_label = overlayLabel(self, "0.000", 15, 255,0,255,False,True)
-        #self.rate_label.setAlignment(QtCore.Qt.AlignCenter|QtCore.Qt.AlignBottom)
-        #self.parent_grid.addWidget(self.rate_label,28,1,2,28)
-
-        self.cur_lcd = overlayLCD(self, 0)
-        self.parent_grid.addWidget(self.cur_lcd,28,0,2,1)
-
-        self.rate_lcd = overlayLCD(self, 2)
-        self.parent_grid.addWidget(self.rate_lcd,28,15,2,1)
-        
-        self.tar_lcd = overlayLCD(self, 1)
-        self.parent_grid.addWidget(self.tar_lcd,28,29,2,1)
+        grid = QtGui.QGridLayout()
+        grid.setSpacing(0)
+        grid.addWidget(self,0,0,1,1)
+        grid.addWidget(self.overlayDial,0,0,1,1)
+        grid.setRowStretch(0,1)
+        self.parent.setLayout(grid)
 
     def set_cur_el(self, el):
         self.setValue(el)
-        self.cur_lcd.display(el)
 
     def set_tar_el(self, el):
         self.overlayDial.setValue(el)
-        self.tar_lcd.display(el)
 
 class overlayElQwtDial(Qwt.QwtDial):
-    def __init__(self):
-        super(overlayElQwtDial, self).__init__()
+    def __init__(self, parent=None):
+        super(overlayElQwtDial, self).__init__(parent)
         self.needle = Qwt.QwtDialSimpleNeedle(Qwt.QwtDialSimpleNeedle.Ray, 1, QtGui.QColor(0,0,255))
         self.setOrigin(180)
         self.initUI()
