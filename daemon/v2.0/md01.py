@@ -1,13 +1,19 @@
 #!/usr/bin/env python
-#########################################
-#   Title: MD01 Controller Class        #
-# Project: VTGS Tracking Daemon         #
-# Version: 2.0                          #
-#    Date: May 27, 2016                 #
-#  Author: Zach Leffke, KJ4QLP          #
-# Comment: Expanded version of the MD-01#
-#          interface                    #
-#########################################
+#################################################
+#   Title: Tracking Daemon                      #
+# Project: VTGS Tracking Daemon                 #
+# Version: 2.0                                  #
+#    Date: May 27, 2016                         #
+#  Author: Zach Leffke, KJ4QLP                  #
+# Comment: This version of the Tracking Daemon  #
+#           is intended to be a 1:1 interface   #
+#           for the MD01.  It will run on the   #
+#           Control Server 'eddie' and provide  #
+#           a single interface to the MD01      #
+#           controllers.                        #
+#           This daemon is a protocol translator#
+#################################################
+
 import socket
 import os
 import string

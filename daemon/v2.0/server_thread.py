@@ -1,9 +1,19 @@
 #!/usr/bin/env python
-##################################################
-# GPS Interface
-# Author: Zach Leffke
-# Description: Initial GPS testing
-##################################################
+#################################################
+#   Title: Tracking Daemon                      #
+# Project: VTGS Tracking Daemon                 #
+# Version: 2.0                                  #
+#    Date: May 27, 2016                         #
+#  Author: Zach Leffke, KJ4QLP                  #
+# Comment: This version of the Tracking Daemon  #
+#           is intended to be a 1:1 interface   #
+#           for the MD01.  It will run on the   #
+#           Control Server 'eddie' and provide  #
+#           a single interface to the MD01      #
+#           controllers.                        #
+#           This daemon is a protocol translator#
+#################################################
+
 
 import threading
 import os
@@ -54,6 +64,7 @@ class ServerThread(threading.Thread):
         self.valid      = 0     # 0=invalid, 1=Management Frame, 2=Antenna Frame
 
         self.callback = None # callback to Daemon Main Thread
+        self.log_file = None #Path to server command log
 
         self.init_thread()
 
@@ -243,138 +254,4 @@ class ServerThread(threading.Thread):
 
     def stopped(self):
         return self._stop.isSet()
-
-    
-
-
-
-
-
-
-###### OLD FUNCTIONS ########################33
-    def check_request(self, data):
-        fields = data.split(" ")
-        #print fields
-        #Check number of fields        
-        if ((len(fields) == 2) or (len(fields) == 4)):
-            try:
-                self.req = request(fields[0].strip('\n'), fields[1].strip('\n'))
-            except ValueError:
-                print self.utc_ts() + "Error: Invalid Command Data Types"
-                return False
-        else: 
-            print "Error | Invalid number of fields in command: ", len(fields) 
-            return False
-        #Validate Subsystem ID
-        if ((self.req.ssid != 'VUL') and (self.req.ssid != '3M0') and (self.req.ssid != '4M5') and (self.req.ssid != 'WX')):
-            print "Error | Invalid Subsystem ID Type: ", self.req.ssid
-            return False
-        #Validate Command Type
-        if ((self.req.cmd != 'SET') and (self.req.cmd != 'QUERY') and (self.req.cmd != 'STOP')):
-            print "Error | Invalid Command Type: ", self.req.cmd
-            return False
-        elif self.req.cmd == 'SET':
-            if len(fields) != 4:
-                print "Error | Invalid number of fields in command: ", len(fields) 
-                return False
-            
-            try:
-                self.req.az = float(fields[2].strip('\n'))
-                self.req.el = float(fields[3].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-
-        return True
-
-
-    def process_request(self, data, addr):
-        if   self.req.ssid == self.ssid: #VHF/UHF/L-Band subsystem ID
-            self.Process_Command(self.md01_thread, data, addr)
-        else:
-            print self.utc_ts() + "This is the VUL Controller"
-
-    def process_command(self, thr, data, addr):
-        az = 0 
-        el = 0
-        if thr.connected == True:
-            if   self.req.cmd == 'SET':
-                thr.set_position(self.req.az, self.req.el)
-                az, el = thr.get_position()
-            elif self.req.cmd == 'QUERY':
-                az, el = thr.get_position()
-                #print az, el
-            elif self.req.cmd == 'STOP':
-                thr.set_stop()
-                time.sleep(0.01)
-                az, el = thr.get_position()
-            
-        self.Send_Feedback(thr, az, el, data, addr)
-
-    def send_feedback(self,thr, az, el, data, addr):
-        msg = thr.ssid + " QUERY " + str(az) + " " + str(el) + "\n"
-        self.sock.sendto(msg, addr)
-
-
-    
-
-
-################# OLD PROCESS REQUEST FUNCTION #########################################
-    def Process_Request_OLD(self, data, addr):
-        if   self.req.ssid == 'VUL': #VHF/UHF/L-Band subsystem ID
-            self.Process_Command(self.vul_thread, data, addr)
-        elif self.req.ssid == '3M0': #3.0 m Dish Subsystem ID
-            self.Process_Command(self.dish_3m0_thread, data, addr)
-        elif self.req.ssid == '4M5': #4.5 m Dish Subsystem ID
-            self.Process_Command(self.dish_4m5_thread, data, addr)
-        elif self.req.ssid == 'WX':  #NOAA WX Subsystem ID
-            pass
-
-################# OLD CHECK REQUEST FUNCTION #########################################
-    def Check_Request_OLD(self, data):
-        fields = data.split(" ")
-        #print fields
-        #Check number of fields        
-        if ((len(fields) == 2) or (len(fields) == 4)):
-            try:
-                self.req = request(fields[0].strip('\n'), fields[1].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-        else: 
-            print "Error | Invalid number of fields in command: ", len(fields) 
-            return False
-        #Validate Subsystem ID
-        if ((self.req.ssid != 'VUL') and (self.req.ssid != '3M0') and (self.req.ssid != '4M5') and (self.req.ssid != 'WX')):
-            print "Error | Invalid Subsystem ID Type: ", self.req.ssid
-            return False
-        #Validate Command Type
-        if ((self.req.cmd != 'SET') and (self.req.cmd != 'QUERY') and (self.req.cmd != 'STOP')):
-            print "Error | Invalid Command Type: ", self.req.cmd
-            return False
-        elif self.req.cmd == 'SET':
-            if len(fields) != 4:
-                print "Error | Invalid number of fields in command: ", len(fields) 
-                return False
-            
-            try:
-                self.req.az = float(fields[2].strip('\n'))
-                self.req.el = float(fields[3].strip('\n'))
-            except ValueError:
-                print "Error | Invalid Command Data Types"
-                return False
-
-        return True
-
-################# OLD REQUEST Object #########################################
-
-class request_old(object):
-    def __init__ (self, ssid = None, cmd = None, az = None, el = None):
-        self.ssid   = ssid
-        self.cmd    = cmd
-        self.az     = az
-        self.el     = el
-
-
-
 

@@ -1,9 +1,18 @@
 #!/usr/bin/env python
-##################################################
-# GPS Interface
-# Author: Zach Leffke
-# Description: Initial GPS testing
-##################################################
+#################################################
+#   Title: Tracking Daemon                      #
+# Project: VTGS Tracking Daemon                 #
+# Version: 2.0                                  #
+#    Date: May 27, 2016                         #
+#  Author: Zach Leffke, KJ4QLP                  #
+# Comment: This version of the Tracking Daemon  #
+#           is intended to be a 1:1 interface   #
+#           for the MD01.  It will run on the   #
+#           Control Server 'eddie' and provide  #
+#           a single interface to the MD01      #
+#           controllers.                        #
+#           This daemon is a protocol translator#
+#################################################
 
 import threading
 import os
@@ -17,21 +26,6 @@ import SocketServer
 from optparse import OptionParser
 from datetime import datetime as date
 from md01_thread import *
-
-def getTimeStampGMT(self):
-    return str(date.utcnow()) + " UTC | "
-
-class request(object):
-    def __init__ (self, uid=None, ssid=None, cmd_type=None):
-        #Header Fields
-        self.uid    = uid       #User ID
-        self.ssid   = ssid      #Subsystem ID
-        self.type   = cmd_type  #Command Type
-
-
-        self.cmd    = None   #
-        self.az     = None
-        self.el     = None
 
 class MainThread(threading.Thread):
     def __init__ (self, ssid, serv_thr, md01_thr):
@@ -48,7 +42,7 @@ class MainThread(threading.Thread):
         self.serv_thr = serv_thr
 
         self.active_watchdog = 0 #watchdog counter for active state, if
-        self.active_timeout  = 10 #watchdog counter for active state
+        self.active_timeout  = 30 #watchdog counter for active state
         self.active_user = None #current user of active session
 
     def run(self):
@@ -63,6 +57,7 @@ class MainThread(threading.Thread):
                 self.active_watchdog += 1
                 if self.active_watchdog >= self.active_timeout: #watchdog for active state, if no activity, switch to STANDBY
                     print '{:s}ACTIVE session timeout ({:3.1f}s), User \'{:s}\', switching to STANDBY'.format(self.utc_ts(), self.active_timeout, self.active_user)
+                    self.md01_thr.set_stop()
                     self.set_state_standby()
             elif self.state == 'FAULT':
                 pass
@@ -92,16 +87,19 @@ class MainThread(threading.Thread):
     def motion_frame_received(self, parent, frame):
         #Called from server thread when motion frame received
         if self.state == 'ACTIVE': #Motion commands only processed when daemon is ACTIVE
+            self.active_watchdog = 0 #reset watchdog timer
             if frame.cmd == 'SET':  #SET TARGET AZ/EL
                 print '{:s}User \'{:s}\' requested MOTION SET: AZ={:3.1f}, EL={:3.1f}'.format(self.utc_ts(), frame.uid, frame.az, frame.el)
                 #MD01 Set target angles
+                self.md01_thr.set_position(frame.az, frame.el)
                 #parent.send_motion_feedback(self.state)
             elif frame.cmd == 'STOP':  #STOP ANTENNA MOTION
                 print '{:s}User \'{:s}\' requested MOTION STOP'.format(self.utc_ts(), frame.uid)
                 #MD01 set stop
+                self.md01_thr.set_stop()
                 #parent.send_motion_feedback(self.state)
             elif frame.cmd == 'GET':  #QUERY ANTENNA POSITION
-                print '{:s}User \'{:s}\' requested MOTION QUERY'.format(self.utc_ts(), frame.uid)
+                print '{:s}User \'{:s}\' requested MOTION GET'.format(self.utc_ts(), frame.uid)
                 #MD01 query
             az, el, az_rate, el_rate = self.get_motion_state()
             parent.send_motion_feedback(az, el, az_rate, el_rate)
@@ -132,7 +130,6 @@ class MainThread(threading.Thread):
         elif self.user_con == False: #user is not connected
             if ((self.state == 'STANDBY') or (self.state == 'ACTIVE')):
                 self.set_state_idle()
-        
 
     def set_state_idle(self):
         self.state = 'IDLE'

@@ -1,9 +1,19 @@
 #!/usr/bin/env python
-##################################################
-# GPS Interface
-# Author: Zach Leffke
-# Description: Initial GPS testing
-##################################################
+#################################################
+#   Title: Tracking Daemon                      #
+# Project: VTGS Tracking Daemon                 #
+# Version: 2.0                                  #
+#    Date: May 27, 2016                         #
+#  Author: Zach Leffke, KJ4QLP                  #
+# Comment: This version of the Tracking Daemon  #
+#           is intended to be a 1:1 interface   #
+#           for the MD01.  It will run on the   #
+#           Control Server 'eddie' and provide  #
+#           a single interface to the MD01      #
+#           controllers.                        #
+#           This daemon is a protocol translator#
+#################################################
+
 
 from optparse import OptionParser
 import threading
@@ -16,14 +26,9 @@ import time
 import inspect
 from md01 import *
 
-def getTimeStampGMT(self):
-    return str(date.utcnow()) + " GMT | "
-
 class MD01Thread(threading.Thread):
     def __init__ (self, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
-        self._stop  = threading.Event()
-        self.lock   = threading.Lock()
         #self.parent = parent
         self.ssid   = ssid
         self.md01   = md01(ip, port)
@@ -109,9 +114,9 @@ class MD01Thread(threading.Thread):
                             if set_flag == 4:
                                 set_flag = 0
                                 if ((round(self.cur_az,1) != round(self.tar_az,1)) or (round(self.cur_el,1) != round(self.tar_el,1))):
-                                    #print "  Azimuth:", self.az_rate, self.cur_az, self.tar_az
-                                    #print "Elevation:", self.el_rate, self.cur_el, self.tar_el
-                                    self.md01.set_position(self.tar_az, self.tar_el)
+                                    print "  Azimuth:", self.az_rate, self.cur_az, self.tar_az
+                                    print "Elevation:", self.el_rate, self.cur_el, self.tar_el
+                                    #self.md01.set_position(self.tar_az, self.tar_el)
                         time.sleep(0.250)
             except:
                 print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
@@ -148,6 +153,7 @@ class MD01Thread(threading.Thread):
     def set_position(self, az, el):
         self.tar_az = az
         self.tar_el = el
+        self.md01.set_position(self.tar_az, self.tar_el)
 
     def set_callback(self, callback):
         self.callback = callback
