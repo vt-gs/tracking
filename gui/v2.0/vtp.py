@@ -68,7 +68,7 @@ class vtp(object):
 
         self.ssid       = ssid
         self.uid        = uid
-        self.type       = 'MGMT'
+        #self.type       = 'MGMT'
         self.cmd        = 'QUERY'
 
         self.mgmt_fb_frame = ManagementFrame()  #Feedback Management Frame
@@ -105,7 +105,8 @@ class vtp(object):
 
     def set_ssid(self, ssid):
         self.ssid = ssid
-        self.tx_frame.ssid = ssid
+        self.tx_mgmt_frame.ssid = ssid
+        self.tx_mot_frame.ssid = ssid
 
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | VTP | "
@@ -120,18 +121,52 @@ class vtp(object):
             print self.utc_ts() + "Sent Message: " + msg
             self.sock.send(msg)
             self.feedback, addr = self.sock.recvfrom(1024)   
-            self.mgmt_fb_frame.valid = self.validate_management_feedback()
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
             if self.mgmt_fb_frame.valid == True:
                 parent.set_daemon_state(self.mgmt_fb_frame.cmd)
         except socket.error as msg:
-            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg)
-            print self.utc_ts() + "VTP | Failed to receive feedback during Get Status..."
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
             #continue
             #self.sock.close()
             #sys.exit()
 
-    def validate_management_feedback(self):
-        fields = self.feedback.strip().split(",")
+    def set_session_start(self, parent):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MGMT,'
+        msg += 'START'
+        try:        
+            print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+            if self.mgmt_fb_frame.valid == True:
+                parent.set_daemon_state(self.mgmt_fb_frame.cmd)
+        except socket.error as msg:
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'set_session_start\'"
+
+    def set_session_stop(self, parent):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MGMT,'
+        msg += 'STOP'
+        try:        
+            print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+            if self.mgmt_fb_frame.valid == True:
+                parent.set_daemon_state(self.mgmt_fb_frame.cmd)
+        except socket.error as msg:
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'set_session_stop\'"
+
+    def validate_management_feedback(self, feedback):
+        fields = feedback.strip().split(",")
         #Expected to receive a managment frame
         if (len(fields) == 4):
             try:
@@ -139,7 +174,7 @@ class vtp(object):
                 self.mgmt_fb_frame.ssid = fields[1].strip()
                 self.mgmt_fb_frame.type = fields[2].strip()
                 self.mgmt_fb_frame.cmd  = fields[3].strip()
-                print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
+                #print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
             except ValueError:
                 print self.utc_ts() + "Invalid data types in management frame feedback"
                 return False
@@ -155,11 +190,109 @@ class vtp(object):
             print "{:s}Invalid feedback SSID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.ssid, self.mgmt_fb_frame.ssid)
             return False
 
-        if self.mgmt_fb_frame.type != self.type:
-            print "{:s}Invalid feedback TYPE, expected: {:s}, received: {:s}".format(self.utc_ts(), self.type, self.mgmt_fb_frame.type)
+        if self.mgmt_fb_frame.type != 'MGMT':
+            print "{:s}Invalid feedback TYPE, expected: {:s}, received: {:s}".format(self.utc_ts(), 'MGMT', self.mgmt_fb_frame.type)
             return False
 
         return True
+
+
+
+    def get_motion_feedback(self):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MOT,'
+        msg += 'GET'
+        try:        
+            print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
+        except socket.error as msg:
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'get_motion_feedback\'"
+
+        return  self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+
+    def validate_motion_feedback(self, feedback):
+        fields = feedback.strip().split(",")
+        #Expected to receive a managment frame
+        if (len(fields) == 8):
+            try:
+                self.mot_fb_frame.uid  = fields[0].strip()
+                self.mot_fb_frame.ssid = fields[1].strip()
+                self.mot_fb_frame.type = fields[2].strip()
+                self.mot_fb_frame.cmd  = fields[3].strip()
+                #print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
+            except ValueError:
+                print self.utc_ts() + "Invalid data types in management frame feedback"
+                return False
+        else: 
+            print self.utc_ts() + "Invalid number of fields in management frame feedback: ", len(fields) 
+            return False
+
+        # Header Check
+        if self.mot_fb_frame.uid != self.uid:
+            print "{:s}Invalid feedback USERID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.uid, self.mot_fb_frame.uid)
+            return False
+            
+        if self.mot_fb_frame.ssid != self.ssid:
+            print "{:s}Invalid feedback SSID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.ssid, self.mot_fb_frame.ssid)
+            return False
+
+        if self.mot_fb_frame.type != 'MOT':
+            print "{:s}Invalid feedback TYPE, expected: {:s}, received: {:s}".format(self.utc_ts(), 'MOT', self.mot_fb_frame.type)
+            return False
+
+        if self.mot_fb_frame.cmd != 'STATE':
+            print "{:s}Invalid feedback CMD, expected: {:s}, received: {:s}".format(self.utc_ts(), 'STATE', self.mot_fb_frame.type)
+            return False
+
+        try:
+            self.mot_fb_frame.az        = float(fields[4].strip())
+            self.mot_fb_frame.el        = float(fields[5].strip())
+            self.mot_fb_frame.az_rate   = float(fields[6].strip())
+            self.mot_fb_frame.el_rate   = float(fields[7].strip())
+            #print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
+        except ValueError:
+            print self.utc_ts() + "Invalid data types in motion frame feedback"
+            return False
+
+        return True
+
+
+
+
+
+    def set_stop(self):
+        #stop md01 immediately
+        try:
+            msg = self.ssid + " STOP"
+            print self.utc_ts() + "VTP | Sent Message: " + msg
+            self.sock.sendto(msg, (self.ip, self.port))
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.fb_frame.valid = self.Validate_Feedback()          
+        except socket.error as msg:
+            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+            print self.utc_ts() + "VTP | Failed to receive feedback during Set Stop..."
+            #continue
+            #self.sock.close()
+            #sys.exit()
+        return self.fb_frame.valid, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
+
+
+    
+
+
+
+
+################ OLD FUNCTIONS #############################################3
+
+
+
+
+
         
     def Validate_Feedback_OLD(self):
         fields = self.feedback.split(",")

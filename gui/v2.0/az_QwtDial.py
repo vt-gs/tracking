@@ -5,7 +5,6 @@ from PyQt4 import QtCore
 from PyQt4 import Qt
 import PyQt4.Qwt5 as Qwt
 
-from lcd_feedback_widget import *
 import numpy as np
 import sys
 

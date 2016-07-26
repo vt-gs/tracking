@@ -44,12 +44,21 @@ class MainWindow(QtGui.QMainWindow):
         self.ssid = options.ssid
         self.uid  = options.uid
 
+        #self.statusBar().showMessage("| Disconnected | Manual | Current Az: 000.0 | Current El: 000.0 |")
+        self.init_variables()
+        self.init_ui()
+        self.darken()
+        #self.setFocus()
+
+    def init_variables(self):
         self.connected = False #TCP/IP Connection to Daemon
         self.daemon_state = 'IDLE'
 
         self.cur_az = 0
+        self.cur_az_rate = 0
         self.tar_az = 0
         self.cur_el = 0
+        self.cur_el_rate = 0
         self.tar_el = 0
         self.pred_az = 0.0
         self.pred_el = 0.0
@@ -63,20 +72,12 @@ class MainWindow(QtGui.QMainWindow):
         self.pred_conn_stat = 0   #Gpredict Connection Status, 0=Disconnected, 1=Listening, 2=Connected
         self.autoTrack = False    #auto track mode, True = Auto, False = Manual
 
-        #self.statusBar().showMessage("| Disconnected | Manual | Current Az: 000.0 | Current El: 000.0 |")
-
-        self.init_ui()
-        self.darken()
-        #self.setFocus()
-
     def init_ui(self):
         self.init_frames()
         self.init_ctrl_frame()  
         self.init_connect_frame() 
         self.init_predict_frame()   
-
         #self.initTimers()
-
         self.connect_signals()
         self.show()
 
@@ -97,12 +98,12 @@ class MainWindow(QtGui.QMainWindow):
         #Called by button control frame
         if az_el == 'az':
             self.tar_az += val
-            self.update_azimuth()
+            self.update_target_azimuth()
         elif az_el == 'el':
             self.tar_el += val
-            self.update_elevation()
+            self.update_target_elevation()
 
-    def update_azimuth(self):
+    def update_target_azimuth(self):
         if self.tar_az < -180.0: 
             self.tar_az = -180.0
             self.azTextBox.setText(str(self.tar_az))
@@ -112,7 +113,7 @@ class MainWindow(QtGui.QMainWindow):
         self.az_compass.set_tar_az(self.tar_az)
         self.az_lcd_fr.set_tar(self.tar_az)
 
-    def update_elevation(self):
+    def update_target_elevation(self):
         if self.tar_el < 0: 
             self.tar_el = 0
             self.elTextBox.setText(str(self.tar_el))
@@ -136,7 +137,7 @@ class MainWindow(QtGui.QMainWindow):
             self.ssid = 'WX'
             self.port = 2003
         print self.utc_ts() + "Updated Subsystem ID: " + self.ssid
-        print self.utc_ts() + "Updated Daemon port number: " + self.port
+        print self.utc_ts() + "Updated Daemon port number: " + str(self.port)
         self.callback.set_ssid(self.ssid)
 
     def connect_button_event(self):
@@ -167,10 +168,48 @@ class MainWindow(QtGui.QMainWindow):
             self.session_button.setEnabled(False)
 
     def session_button_event(self):
-        pass
+        #USer is attempting to start a tracking session
+        #is the daemon in a STANDBY State?
+        if self.daemon_state == 'STANDBY':
+            print self.utc_ts() + "Requesting Session START"
+            self.callback.set_session_start(self)
+            #self.session_button.setText('Stop')
+        elif self.daemon_state == 'ACTIVE':
+            print self.utc_ts() + "Requesting Session STOP"
+            self.callback.set_session_stop(self)
+            #self.session_button.setText('Start')
+
+            #daemon is in ACTIVE mode, send stop message
 
     def query_button_event(self):
-        pass
+        print self.utc_ts() + "Sending MANAGEMENT QUERY"
+        self.callback.get_daemon_state(self)
+        #need to change above to expect returned value
+        #valid = self.callback.get_daemon_state(self)
+        #if valid == True:
+            
+        if self.daemon_state == 'ACTIVE':
+            print self.utc_ts() + "Sending MOTION QUERY"
+            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback()
+
+            if valid != -1:
+                self.cur_az = az
+                self.cur_el = el
+                self.cur_az_rate = az_rate
+                self.cur_el_rate = el_rate
+                self.update_current_angles()
+            else:
+                self.autoQuery_cb.setCheckState(QtCore.Qt.Unchecked)
+     
+    def update_current_angles(self):
+        self.az_compass.set_cur_az(self.cur_az)
+        self.az_lcd_fr.set_cur(self.cur_az)
+        self.az_lcd_fr.set_rate(self.cur_az_rate)
+        
+
+        self.el_compass.set_cur_el(self.cur_el)
+        self.el_lcd_fr.set_cur(self.cur_el)
+        self.el_lcd_fr.set_rate(self.cur_el_rate)
 
     def stop_button_event(self):
         pass
@@ -195,10 +234,16 @@ class MainWindow(QtGui.QMainWindow):
         self.daemon_state_lbl.setText(state)
         if self.daemon_state == 'IDLE':
             self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,255,255);}")
+            self.session_button.setText('Start')
+            self.ctrl_fr.setEnabled(False)
         elif self.daemon_state == 'STANDBY':
             self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,255,0);}")
+            self.session_button.setText('Start')
+            self.ctrl_fr.setEnabled(False)
         elif self.daemon_state == 'ACTIVE':
             self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(0,255,0);}")
+            self.session_button.setText('Stop')
+            self.ctrl_fr.setEnabled(True)
 
     def init_connect_frame(self):
         uid_lbl = QtGui.QLabel("User ID:")
@@ -457,6 +502,7 @@ class MainWindow(QtGui.QMainWindow):
     def init_frames(self):
         self.ctrl_fr = QtGui.QFrame(self)
         self.ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.ctrl_fr.setEnabled(False)
         self.con_fr = QtGui.QFrame(self)
         self.con_fr.setFrameShape(QtGui.QFrame.StyledPanel)
         self.pred_fr = QtGui.QFrame(self)
@@ -483,9 +529,9 @@ class MainWindow(QtGui.QMainWindow):
         self.el_ctrl_fr.setFrameShape(QtGui.QFrame.StyledPanel)
 
         vbox1 = QtGui.QVBoxLayout()
-        vbox1.addWidget(self.ctrl_fr)
-        vbox1.addStretch(1) 
         vbox1.addWidget(self.con_fr)
+        vbox1.addStretch(1)
+        vbox1.addWidget(self.ctrl_fr)
         vbox1.addStretch(1) 
         vbox1.addWidget(self.pred_fr)
 

@@ -42,7 +42,7 @@ class MainThread(threading.Thread):
         self.serv_thr = serv_thr
 
         self.active_watchdog = 0 #watchdog counter for active state, if
-        self.active_timeout  = 30 #watchdog counter for active state
+        self.active_timeout  = 10 #watchdog counter for active state
         self.active_user = None #current user of active session
 
     def run(self):
@@ -78,6 +78,7 @@ class MainThread(threading.Thread):
         elif frame.cmd == 'STOP':  #initiate User Session
             print '{:s}User \'{:s}\' requested session STOP'.format(self.utc_ts(), frame.uid)
             if self.state == 'ACTIVE':
+                self.md01_thr.set_stop()
                 self.set_state_standby()
         elif frame.cmd == 'QUERY':  #initiate User Session
             print '{:s}User \'{:s}\' requested session QUERY'.format(self.utc_ts(), frame.uid)
@@ -123,12 +124,14 @@ class MainThread(threading.Thread):
         if   self.user_con == True: #user is connected
             if self.md01_con == True: #MD01 is connected
                 if self.state == 'IDLE': #Daemon is in IDLE 
+                    # DO NOT NEED TO STOP MD01
                     self.set_state_standby()
             if self.md01_con == False: #MD01 is not connected
                 if ((self.state == 'STANDBY') or (self.state == 'ACTIVE')):
                     self.set_state_idle()
         elif self.user_con == False: #user is not connected
             if ((self.state == 'STANDBY') or (self.state == 'ACTIVE')):
+                self.md01_thr.set_stop()
                 self.set_state_idle()
 
     def set_state_idle(self):

@@ -44,11 +44,11 @@ class md01(object):
         for x in [0x57,0,0,0,0,0,0,0,0,0,0,0x1F,0x20]: self.status_cmd.append(x)
         for x in [0x57,0,0,0,0,0x0a,0,0,0,0,0x0a,0x2F,0x20]: self.set_cmd.append(x) #PH=PV=0x0a, 0x0a = 10, BIG-RAS/HR is 10 pulses per degree
 
-    def getTimeStampGMT(self):
-        return str(date.utcnow()) + " GMT | "
+    #def getTimeStampGMT(self):
+    #    return str(date.utcnow()) + " GMT | "
 
     def utc_ts(self):
-        return str(date.utcnow()) + " UTC | MD01-Obj |"
+        return str(date.utcnow()) + " UTC | md01 | "
 
     def connect(self):
         #connect to md01 controller
@@ -105,6 +105,7 @@ class md01(object):
         else:
             try:
                 self.sock.send(self.stop_cmd) 
+                print self.utc_ts() + 'Sent \'STOP\' command to MD01'
                 self.feedback = self.recv_data()          
             except socket.error as msg:
                 #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
