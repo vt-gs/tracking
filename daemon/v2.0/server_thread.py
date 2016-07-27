@@ -86,7 +86,7 @@ class ServerThread(threading.Thread):
                     data = self.conn.recvfrom(1024)[0]
                     if data:
                         data = data.strip()
-                        print self.utc_ts() + "User Message: " + str(data)
+                        #print self.utc_ts() + "User Message: " + str(data)
                         #self.valid = self.check_frame(data)
                         if self.check_frame(data): #True if fully validated frame
                             #Valid FRAME with all checks complete at this point

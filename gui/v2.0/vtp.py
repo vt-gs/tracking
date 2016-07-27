@@ -28,16 +28,17 @@ class vtp_frame(object):
         self.valid  = valid
 
 class MotionFrame(object):
-    def __init__ (self, uid=None, ssid=None, cmd_type=None):
+    def __init__ (self, uid=None, ssid=None):
         #Header Fields
         self.uid     = uid       #User ID
         self.ssid    = ssid      #Subsystem ID
-        self.type    = cmd_type  #Command Type
+        self.type    = 'MOT'  #Command Type = MOTION
         self.cmd     = None   #
         self.az      = None
         self.el      = None
         self.az_rate = None
         self.el_rate = None
+        self.valid   = False
 
 class ManagementFrame(object):
     def __init__ (self, uid=None, ssid=None, cmd_type=None, valid = None):
@@ -75,14 +76,14 @@ class vtp(object):
         self.mot_fb_frame  = MotionFrame()      #Feedback Motion Frame
 
         self.tx_mgmt_frame = ManagementFrame()
-        self.tx_mot_frame  = MotionFrame()
+        self.tx_mot_frame  = MotionFrame(self.uid, self.ssid, )
         #self.tx_frame   = vtp_frame(ssid) #Transmit Frame to send to Tracking Daemon
 
         self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.sock.settimeout(self.timeout)
         self.connected = False
 
-
+    ##### GENERAL FUNCTIONS #####
     def connect(self, ip, port, parent):
         self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.sock.settimeout(self.timeout)
@@ -91,7 +92,7 @@ class vtp(object):
             self.sock.connect((ip,port))
             print self.utc_ts() + "Connection to Tracking Daemon Successful"
             time.sleep(0.05) 
-            self.get_daemon_state(parent)
+            self.get_daemon_state(True)
             return True
         except socket.error as msg:
             print self.utc_ts() + "Exception Thrown: " + str(msg)
@@ -108,104 +109,83 @@ class vtp(object):
         self.tx_mgmt_frame.ssid = ssid
         self.tx_mot_frame.ssid = ssid
 
+    def set_uid(self, uid):
+        self.uid = uid
+        self.tx_mgmt_frame.uid = uid
+        self.tx_mot_frame.uid = uid
+
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | VTP | "
-
-    def get_daemon_state(self,parent):
-        msg = ""
-        msg += self.uid + ','
-        msg += self.ssid + ','
-        msg += 'MGMT,'
-        msg += 'QUERY'
-        try:        
-            print self.utc_ts() + "Sent Message: " + msg
-            self.sock.send(msg)
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
-            if self.mgmt_fb_frame.valid == True:
-                parent.set_daemon_state(self.mgmt_fb_frame.cmd)
-        except socket.error as msg:
-            print self.utc_ts() + "Exception Thrown: " + str(msg)
-            print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
-            #continue
-            #self.sock.close()
-            #sys.exit()
-
-    def set_session_start(self, parent):
-        msg = ""
-        msg += self.uid + ','
-        msg += self.ssid + ','
-        msg += 'MGMT,'
-        msg += 'START'
-        try:        
-            print self.utc_ts() + "Sent Message: " + msg
-            self.sock.send(msg)
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
-            if self.mgmt_fb_frame.valid == True:
-                parent.set_daemon_state(self.mgmt_fb_frame.cmd)
-        except socket.error as msg:
-            print self.utc_ts() + "Exception Thrown: " + str(msg)
-            print self.utc_ts() + "Failed to receive feedback during \'set_session_start\'"
-
-    def set_session_stop(self, parent):
-        msg = ""
-        msg += self.uid + ','
-        msg += self.ssid + ','
-        msg += 'MGMT,'
-        msg += 'STOP'
-        try:        
-            print self.utc_ts() + "Sent Message: " + msg
-            self.sock.send(msg)
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
-            if self.mgmt_fb_frame.valid == True:
-                parent.set_daemon_state(self.mgmt_fb_frame.cmd)
-        except socket.error as msg:
-            print self.utc_ts() + "Exception Thrown: " + str(msg)
-            print self.utc_ts() + "Failed to receive feedback during \'set_session_stop\'"
-
-    def validate_management_feedback(self, feedback):
-        fields = feedback.strip().split(",")
-        #Expected to receive a managment frame
-        if (len(fields) == 4):
+    #***** END CLASS FUNCTIONS *****
+    #
+    #
+    #
+    ##### MOTION FRAME FUNCTIONS #####
+    def set_stop(self):
+        #stop md01 immediately
+        self.tx_mot_frame.cmd = "STOP"
+        if self.connected == True:
             try:
-                self.mgmt_fb_frame.uid  = fields[0].strip()
-                self.mgmt_fb_frame.ssid = fields[1].strip()
-                self.mgmt_fb_frame.type = fields[2].strip()
-                self.mgmt_fb_frame.cmd  = fields[3].strip()
-                #print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
-            except ValueError:
-                print self.utc_ts() + "Invalid data types in management frame feedback"
-                return False
-        else: 
-            print self.utc_ts() + "Invalid number of fields in management frame feedback: ", len(fields) 
-            return False
-        
-        if self.mgmt_fb_frame.uid != self.uid:
-            print "{:s}Invalid feedback USERID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.uid, self.mgmt_fb_frame.uid)
-            return False
-            
-        if self.mgmt_fb_frame.ssid != self.ssid:
-            print "{:s}Invalid feedback SSID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.ssid, self.mgmt_fb_frame.ssid)
-            return False
-
-        if self.mgmt_fb_frame.type != 'MGMT':
-            print "{:s}Invalid feedback TYPE, expected: {:s}, received: {:s}".format(self.utc_ts(), 'MGMT', self.mgmt_fb_frame.type)
-            return False
-
-        return True
+                msg = "{},{},{},{}".format( self.tx_mot_frame.uid, \
+                                            self.tx_mot_frame.ssid, \
+                                            self.tx_mot_frame.type, \
+                                            self.tx_mot_frame.cmd)
+                print self.utc_ts() + "Sent Message: " + msg
+                self.sock.send(msg)
+                self.feedback, addr = self.sock.recvfrom(1024)   
+                self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
+            except socket.error as msg:
+                print self.utc_ts() + "VTP | Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                print self.utc_ts() + "VTP | Failed to receive feedback during Set Stop..."
+                #continue
+                #self.sock.close()
+                #sys.exit()
+        #return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
 
+    def set_position(self, az, el, verbosity):
+        #set azimuth and elevation of md01
+        self.tx_mot_frame.cmd = "SET"
+        self.tx_mot_frame.az ,self.tx_mot_frame.el = self.verify_set_angles(az,el)
+        if self.connected == True:
+            try:
+                #msg = self.ssid + " " + self.cmd + " " + self.cmd_az + " " + self.cmd_el
+                msg = "{},{},{},{},{},{}".format(   self.tx_mot_frame.uid, \
+                                                    self.tx_mot_frame.ssid, \
+                                                    self.tx_mot_frame.type, \
+                                                    self.tx_mot_frame.cmd, \
+                                                    self.tx_mot_frame.az, \
+                                                    self.tx_mot_frame.el)
+                if verbosity: print self.utc_ts() + "Sent Message: " + msg
+                self.sock.send(msg)
+                self.feedback, addr = self.sock.recvfrom(1024)   
+                self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
+                return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+            except socket.error as msg:
+                print self.utc_ts() + "Exception Thrown: " + str(msg)
+                print self.utc_ts() + "Failed to receive feedback during Set Position..."
+                #continue
+                #self.sock.close()
+                #sys.exit()
+            return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
-    def get_motion_feedback(self):
+    def verify_set_angles(self, cmd_az, cmd_el):
+        #make sure cmd_az in range -180 to +540
+        if   (cmd_az>540): cmd_az = 540
+        elif (cmd_az < -180): cmd_az = -180
+        #make sure cmd_el in range 0 to 180
+        if   (cmd_el < 0): cmd_el = 0
+        elif (cmd_el>180): cmd_el = 180
+        return cmd_az, cmd_el
+
+    def get_motion_feedback(self, verbosity):
         msg = ""
         msg += self.uid + ','
         msg += self.ssid + ','
         msg += 'MOT,'
         msg += 'GET'
         try:        
-            print self.utc_ts() + "Sent Message: " + msg
+            if verbosity: print self.utc_ts() + "Sent Message: " + msg
             self.sock.send(msg)
             self.feedback, addr = self.sock.recvfrom(1024)   
             self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
@@ -213,7 +193,7 @@ class vtp(object):
             print self.utc_ts() + "Exception Thrown: " + str(msg)
             print self.utc_ts() + "Failed to receive feedback during \'get_motion_feedback\'"
 
-        return  self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+        return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
     def validate_motion_feedback(self, feedback):
         fields = feedback.strip().split(",")
@@ -261,137 +241,89 @@ class vtp(object):
 
         return True
 
-
-
-
-
-    def set_stop(self):
-        #stop md01 immediately
-        try:
-            msg = self.ssid + " STOP"
-            print self.utc_ts() + "VTP | Sent Message: " + msg
-            self.sock.sendto(msg, (self.ip, self.port))
+    #***** END MOTION FRAME FUNCTIONS *****
+    #
+    #
+    #
+    ##### MANAGEMENT FRAME FUNCTIONS #####
+    def get_daemon_state(self, verbosity):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MGMT,'
+        msg += 'QUERY'
+        try:        
+            if verbosity: print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
             self.feedback, addr = self.sock.recvfrom(1024)   
-            self.fb_frame.valid = self.Validate_Feedback()          
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
         except socket.error as msg:
-            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            print self.utc_ts() + "VTP | Failed to receive feedback during Set Stop..."
-            #continue
-            #self.sock.close()
-            #sys.exit()
-        return self.fb_frame.valid, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
+        return self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
 
+    def set_session_start(self):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MGMT,'
+        msg += 'START'
+        try:        
+            print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+        except socket.error as msg:
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'set_session_start\'"
+        return self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
 
-    
+    def set_session_stop(self):
+        msg = ""
+        msg += self.uid + ','
+        msg += self.ssid + ','
+        msg += 'MGMT,'
+        msg += 'STOP'
+        try:        
+            print self.utc_ts() + "Sent Message: " + msg
+            self.sock.send(msg)
+            self.feedback, addr = self.sock.recvfrom(1024)   
+            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+        except socket.error as msg:
+            print self.utc_ts() + "Exception Thrown: " + str(msg)
+            print self.utc_ts() + "Failed to receive feedback during \'set_session_stop\'"
+        return self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
 
-
-
-
-################ OLD FUNCTIONS #############################################3
-
-
-
-
-
-        
-    def Validate_Feedback_OLD(self):
-        fields = self.feedback.split(",")
-        #print fields
-        #Check number of fields        
+    def validate_management_feedback(self, feedback):
+        fields = feedback.strip().split(",")
+        #Expected to receive a managment frame
         if (len(fields) == 4):
             try:
-                self.fb_frame.ssid = fields[0].strip('\n')
-                self.fb_frame.cmd  = fields[1].strip('\n')
+                self.mgmt_fb_frame.uid  = fields[0].strip()
+                self.mgmt_fb_frame.ssid = fields[1].strip()
+                self.mgmt_fb_frame.type = fields[2].strip()
+                self.mgmt_fb_frame.cmd  = fields[3].strip()
+                #print self.mgmt_fb_frame.uid,self.mgmt_fb_frame.ssid,self.mgmt_fb_frame.type,self.mgmt_fb_frame.cmd
             except ValueError:
-                print self.utc_ts() + "VTP | Invalid Command Data Types"
+                print self.utc_ts() + "Invalid data types in management frame feedback"
                 return False
         else: 
-            print self.utc_ts() + "VTP | Invalid number of fields in command: ", len(fields) 
+            print self.utc_ts() + "Invalid number of fields in management frame feedback: ", len(fields) 
             return False
-        #Validate Subsystem ID
-        if ((self.fb_frame.ssid != 'VUL') and (self.fb_frame.ssid != '3M0') and (self.fb_frame.ssid != '4M5') and (self.fb_frame.ssid != 'WX')):
-            print self.utc_ts() + "VTP | Invalid Subsystem ID Type: ", self.req.ssid
+        
+        if self.mgmt_fb_frame.uid != self.uid:
+            print "{:s}Invalid feedback USERID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.uid, self.mgmt_fb_frame.uid)
             return False
-        #Validate QUERY Command Type
-        if (self.fb_frame.cmd != 'QUERY'):
-            print self.utc_ts() + "VTP | Invalid Command Type: ", self.fb_frame.cmd
+            
+        if self.mgmt_fb_frame.ssid != self.ssid:
+            print "{:s}Invalid feedback SSID, expected: {:s}, received: {:s}".format(self.utc_ts(), self.ssid, self.mgmt_fb_frame.ssid)
             return False
-        else:
-            try:
-                self.fb_frame.az = float(fields[2].strip('\n'))
-                self.fb_frame.el = float(fields[3].strip('\n'))
-                self.cur_az = self.fb_frame.az
-                self.cur_el = self.fb_frame.el
-            except ValueError:
-                print self.utc_ts() + "VTP | Invalid Az/El Data Types"
-                return False
-        #print self.fb_frame.ssid, self.fb_frame.cmd, self.fb_frame.az, self.fb_frame.el
-        return True    
 
-    def get_status(self):
-        try:        
-            msg = self.ssid + " GET"
-            #print self.utc_ts() + "VTP | Sent Message: " + msg
-            self.sock.sendto(msg, (self.ip, self.port))
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            #print self.feedback  
-            self.fb_frame.valid = self.Validate_Feedback()  
-            #self.feedback = self.recv_data()          
-        except socket.error as msg:
-            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg)
-            print self.utc_ts() + "VTP |Failed to receive feedback during Get Status..."
-            #continue
-            #self.sock.close()
-            #sys.exit()
-        #if self.fb_frame.valid == True: self.Parse_Feedback()  
-        return self.fb_frame.valid, self.cur_az, self.cur_el 
+        if self.mgmt_fb_frame.type != 'MGMT':
+            print "{:s}Invalid feedback TYPE, expected: {:s}, received: {:s}".format(self.utc_ts(), 'MGMT', self.mgmt_fb_frame.type)
+            return False
 
-    def set_stop(self):
-        #stop md01 immediately
-        try:
-            msg = self.ssid + " STOP"
-            print self.utc_ts() + "VTP | Sent Message: " + msg
-            self.sock.sendto(msg, (self.ip, self.port))
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.fb_frame.valid = self.Validate_Feedback()          
-        except socket.error as msg:
-            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            print self.utc_ts() + "VTP | Failed to receive feedback during Set Stop..."
-            #continue
-            #self.sock.close()
-            #sys.exit()
-        return self.fb_frame.valid, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
+        return True
+    #***** END MANAGEMENT FRAME FUNCTIONS *****
 
-    def set_position(self, az, el):
-        #set azimuth and elevation of md01
-        self.cmd_az = az
-        self.cmd_el = el
-        self.tx_frame.cmd = "SET"
-        self.format_set_cmd()
-        try:
-            #msg = self.ssid + " " + self.cmd + " " + self.cmd_az + " " + self.cmd_el
-            msg = "{} {} {} {}".format(self.tx_frame.ssid, self.tx_frame.cmd, round(self.cmd_az,1), round(self.cmd_el,1))
-            print self.utc_ts() + "VTP | Sent Message: " + msg
-            self.sock.sendto(msg, (self.ip, self.port))
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.fb_frame.valid = self.Validate_Feedback() 
-        except socket.error as msg:
-            print self.utc_ts() + "VTP | Exception Thrown: " + str(msg)
-            print self.utc_ts() + "VTP | Failed to receive feedback during Set Position..."
-            #continue
-            #self.sock.close()
-            #sys.exit()
-
-    
-
-    def format_set_cmd(self):
-        #make sure cmd_az in range -180 to +540
-        if   (self.cmd_az>540): self.cmd_az = 540
-        elif (self.cmd_az < -180): self.cmd_az = -180
-        #make sure cmd_el in range 0 to 180
-        if   (self.cmd_el < 0): self.cmd_el = 0
-        elif (self.cmd_el>180): self.cmd_el = 180
-
-        self.tx_frame.az = self.cmd_az
-        self.tx_frame.el = self.cmd_el
 

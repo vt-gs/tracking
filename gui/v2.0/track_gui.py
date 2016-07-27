@@ -60,39 +60,242 @@ class MainWindow(QtGui.QMainWindow):
         self.cur_el = 0
         self.cur_el_rate = 0
         self.tar_el = 0
-        self.pred_az = 0.0
-        self.pred_el = 0.0
-        self.home_az = 0.0
-        self.home_el = 0.0
+        
+        if self.ssid == 'VUL':
+            self.home_az = 180.0
+            self.home_el = 0.0
+            self.tar_az = 180.0
+            self.tar_el = 0.0
+        if self.ssid == '3M0':
+            self.home_az = 180.0
+            self.home_el = 90.0
+            self.tar_az = 180.0
+            self.tar_el = 90.0
 
         self.callback    = None   #Callback accessor for tracking control
         self.update_rate = 250    #Feedback Query Auto Update Interval in milliseconds
 
+        self.pred_az = 0.0
+        self.pred_el = 0.0
+        self.pred_ip = '127.000.000.001'
+        self.pred_port = int(4533)
         self.gpredict  = None     #Callback accessor for gpredict thread control
-        self.pred_conn_stat = 0   #Gpredict Connection Status, 0=Disconnected, 1=Listening, 2=Connected
+        self.pred_conn_state = 0   #Gpredict Connection Status, 0=Disconnected, 1=Listening, 2=Connected
         self.autoTrack = False    #auto track mode, True = Auto, False = Manual
 
     def init_ui(self):
         self.init_frames()
         self.init_ctrl_frame()  
         self.init_connect_frame() 
-        self.init_predict_frame()   
-        #self.initTimers()
+        self.init_predict_frame()
+        
+        #initialize target displays
+        self.update_target_azimuth()
+        self.update_target_elevation()
+        self.azTextBox.setText(str(self.tar_az))
+        self.elTextBox.setText(str(self.tar_el))
+
+        self.init_timers()
         self.connect_signals()
         self.show()
 
-    def connect_signals(self):
+    def init_timers(self):
+        self.update_timer = QtCore.QTimer(self)
+        #self.updateTimer.setInterval(self.update_rate)
+        self.update_timer.start(self.update_rate)
 
+        #Timer used to Poll the GPredict Server thread for updates
+        self.predict_timer = QtCore.QTimer(self)
+        self.predict_timer.setInterval(self.update_rate)
+
+    def connect_signals(self):
+        #Connection Control Signals
+        #QtCore.QObject.connect(self.fb_query_rate_le, QtCore.SIGNAL('editingFinished()'), self.updateRate)
+        self.ssid_combo.activated[int].connect(self.update_ssid_event)
         self.connect_button.clicked.connect(self.connect_button_event)
         self.session_button.clicked.connect(self.session_button_event)
 
+        #Antenna Control Signals
         self.query_button.clicked.connect(self.query_button_event) 
         self.stop_button.clicked.connect(self.stop_button_event) 
         self.home_button.clicked.connect(self.home_button_event)
         self.update_button.clicked.connect(self.update_button_event)  
         self.auto_query_cb.stateChanged.connect(self.auto_query_cb_event)
+        QtCore.QObject.connect(self.fb_query_rate_le, QtCore.SIGNAL('editingFinished()'), self.update_feedback_rate)
+        QtCore.QObject.connect(self.update_timer, QtCore.SIGNAL('timeout()'), self.auto_query_timeout)
 
-        self.ssid_combo.activated[int].connect(self.update_ssid_event)
+
+        #Gpredict Signals
+        self.predict_button.clicked.connect(self.predict_button_event)
+        QtCore.QObject.connect(self.gpredict_ip_le, QtCore.SIGNAL('editingFinished()'), self.update_predict_ip)
+        QtCore.QObject.connect(self.gpredict_port_le, QtCore.SIGNAL('editingFinished()'), self.update_predict_port)
+        QtCore.QObject.connect(self.predict_timer, QtCore.SIGNAL('timeout()'), self.update_predict_status)
+
+   
+
+    
+    ##### GPREDICT and AUTO TRACK FUNCTIONS #####
+    # Functions that deal with Grpedict and auto tracking
+    def predict_button_event(self):
+        if self.pred_conn_state == 0:  #Disconnected, Start Connection Thread
+            self.gpredict = Gpredict_Thread(self, self.pred_ip, self.pred_port,1)
+            self.gpredict.daemon = True
+            self.gpredict.start()
+            #self.pred_conn_state = 1 #listening
+            #self.update_predict_status()
+            self.predict_timer.start()
+        elif ((self.pred_conn_state == 1) or (self.pred_conn_state == 2)):
+            self.gpredict.stop()
+            self.gpredict.join()
+            self.predict_timer.stop()
+            self.set_predict_conn_state(0)
+            self.update_predict_status()
+
+    def update_predict_ip(self):
+        self.pred_ip=self.gpredict_ip_le.text()
+    
+    def update_predict_port(self):
+        self.pred_port = int(self.gpredict_port_le.text())
+
+    def set_predict_conn_state(self, state):
+        #function called by gpredict thread    
+        self.pred_conn_state = state
+        #self.update_predict_status()
+
+    def predict_callback_set(self, az, el):
+        #function called by gpredict thread
+        #sets target angles when auto tracking
+        self.pred_az = az
+        self.pred_el = el
+        self.pred_az_lbl.setText(str(round(self.pred_az,1)))
+        self.pred_el_lbl.setText(str(round(self.pred_el,1)))
+        if self.pred_conn_state == 2: #active connection
+            if self.auto_track_cb.isChecked() == True: #auto track enables
+                self.tar_az = round(self.pred_az, 1)
+                self.tar_el = round(self.pred_el,1)
+                self.update_target_azimuth()
+                self.update_target_elevation()
+                self.callback.set_position(self.tar_az, self.tar_el, True)
+
+    def predict_callback_get(self):
+        #function called by gpredict thread
+        #gets current angles for gpredict feedback
+        if self.pred_conn_state == 2:
+            return self.cur_az, self.cur_el
+        #self.update_predict_status()
+
+    def predict_timeout(self):
+        self.update_predict_status()
+
+    def update_predict_status(self):
+        if self.pred_conn_state == 0: #Disconnected
+            self.predict_button.setText('Connect')
+            self.pred_status_lbl.setText("Disconnected")
+            self.pred_status_lbl.setStyleSheet("QLabel {  font-weight:bold; color:rgb(255,0,0) ; }")
+            #self.gpredict_ip_le.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+            #self.gpredict_port_le.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+            self.gpredict_ip_le.setEnabled(True)
+            self.gpredict_port_le.setEnabled(True)
+        elif self.pred_conn_state == 1: #Listening
+            self.predict_button.setText('Disconnect')
+            self.pred_status_lbl.setText("Listening...")
+            self.pred_status_lbl.setStyleSheet("QLabel {  font-weight:bold; color:rgb(255,255,0) ; }")
+            #self.gpredict_ip_le.setStyleSheet("QLineEdit {background-color:rgb(225,225,225); color:rgb(0,0,0);}")
+            #self.gpredict_port_le.setStyleSheet("QLineEdit {background-color:rgb(225,225,225); color:rgb(0,0,0);}")
+            self.gpredict_ip_le.setEnabled(False)
+            self.gpredict_port_le.setEnabled(False)
+        elif self.pred_conn_state == 2: #Connected
+            self.predict_button.setText('Disconnect')
+            self.pred_status_lbl.setText("Connected")
+            self.pred_status_lbl.setStyleSheet("QLabel {  font-weight:bold; color:rgb(0,255,0) ; }")
+            #self.gpredict_ip_le.setStyleSheet("QLineEdit {background-color:rgb(225,225,225); color:rgb(0,0,0);}")
+            #self.gpredict_port_le.setStyleSheet("QLineEdit {background-color:rgb(225,225,225); color:rgb(0,0,0);}")
+            self.gpredict_ip_le.setEnabled(False)
+            self.gpredict_port_le.setEnabled(False)
+    #---- END GPREDICT and AUTO TRACK FUNCTIONS -----
+    #
+    #
+    ##### ANTENNA CONTROL GET FUNCTIONS #####
+    # Functions that QUERY the Daemon State and Position and update GUI displays
+    def query_button_event(self):
+        print self.utc_ts() + "Sending MANAGEMENT QUERY"
+        valid, state = self.callback.get_daemon_state(True)
+        if valid == True: self.set_daemon_state(state)
+        #if valid == True:
+            
+        if self.daemon_state == 'ACTIVE':
+            print self.utc_ts() + "Sending MOTION QUERY"
+            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(True)
+            if valid == True:
+                self.cur_az = az
+                self.cur_el = el
+                self.cur_az_rate = az_rate
+                self.cur_el_rate = el_rate
+                self.update_current_angles()
+            else:
+                self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+
+    def auto_query_timeout(self):
+        #print self.utc_ts() + "Sending MANAGEMENT QUERY"
+        if self.connected == True:
+            valid, state = self.callback.get_daemon_state(False)
+            if valid == True: self.set_daemon_state(state)
+        if self.daemon_state == 'ACTIVE':
+            #print self.utc_ts() + "Sending MOTION QUERY"
+            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(False)
+            if valid == True:
+                self.cur_az = az
+                self.cur_el = el
+                self.cur_az_rate = az_rate
+                self.cur_el_rate = el_rate
+                self.update_current_angles()
+            else:
+                self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+
+    def update_current_angles(self):
+        self.az_compass.set_cur_az(self.cur_az)
+        self.az_lcd_fr.set_cur(self.cur_az)
+        self.az_lcd_fr.set_rate(self.cur_az_rate)
+
+        self.el_compass.set_cur_el(self.cur_el)
+        self.el_lcd_fr.set_cur(self.cur_el)
+        self.el_lcd_fr.set_rate(self.cur_el_rate)
+
+    def auto_query_cb_event(self, state):
+        CheckState = (state == QtCore.Qt.Checked)
+        if CheckState == True:  
+            self.update_timer.start()
+            print self.utc_ts() + "Started Auto Update, Interval: " + str(self.update_rate) + " [ms]"
+        else:
+            self.update_timer.stop()
+            print self.utc_ts() + "Stopped Auto Update"
+
+    def update_feedback_rate(self):
+        self.update_rate = float(self.fb_query_rate_le.text())    #Feedback Query Auto Update Interval in milliseconds
+
+    #---- END ANTENNA CONTROL GET FUNCTIONS -----
+    #
+    #
+    ##### ANTENNA CONTROL SET FUNCTIONS #####
+    # Functions that update the TARGET ANGLE and send commands to the Daemon
+    def stop_button_event(self):
+        self.update_target_azimuth()
+        self.update_target_elevation()
+        self.callback.set_stop()
+
+    def home_button_event(self):
+        self.tar_az = self.home_az
+        self.tar_el = self.home_el
+        self.update_target_azimuth()
+        self.update_target_elevation()
+        self.callback.set_position(self.tar_az, self.tar_el, True)
+
+    def update_button_event(self):
+        self.tar_az = float(self.azTextBox.text())
+        self.tar_el = float(self.elTextBox.text())
+        self.update_target_azimuth()
+        self.update_target_elevation()
+        self.callback.set_position(self.tar_az, self.tar_el, True)
 
     def increment_target_angle(self, az_el, val):
         #Called by button control frame
@@ -102,34 +305,41 @@ class MainWindow(QtGui.QMainWindow):
         elif az_el == 'el':
             self.tar_el += val
             self.update_target_elevation()
+        self.callback.set_position(self.tar_az, self.tar_el, True)
 
     def update_target_azimuth(self):
-        if self.tar_az < -180.0: 
-            self.tar_az = -180.0
-            self.azTextBox.setText(str(self.tar_az))
-        if self.tar_az > 540.0: 
-            self.tar_az = 540.0
-            self.azTextBox.setText(str(self.tar_az))
+        if self.tar_az < -180.0: self.tar_az = -180.0
+        if self.tar_az >  540.0: self.tar_az = 540.0
         self.az_compass.set_tar_az(self.tar_az)
         self.az_lcd_fr.set_tar(self.tar_az)
+        self.azTextBox.setText(str(self.tar_az))
 
     def update_target_elevation(self):
-        if self.tar_el < 0: 
-            self.tar_el = 0
-            self.elTextBox.setText(str(self.tar_el))
-        if self.tar_el > 180: 
-            self.tar_el = 180
-            self.elTextBox.setText(str(self.tar_el))
+        if self.tar_el < 0: self.tar_el = 0
+        if self.tar_el > 180: self.tar_el = 180
         self.el_compass.set_tar_el(self.tar_el)
         self.el_lcd_fr.set_tar(self.tar_el)
+        self.elTextBox.setText(str(self.tar_el))
+
+    #---- END ANTENNA CONTROL SET FUNCTIONS -----
+    #
+    #
+    ##### CONNECTION FRAME CONTROL FUNCTIONS #####
+    # Button Events, SSID Update, UID update, DAEMON session state control
+    def update_uid_event(self):
+        pass
 
     def update_ssid_event(self, idx):
         if   idx == 0: #VUL
             self.ssid = 'VUL'
             self.port = 2000
+            self.home_az = 180
+            self.home_el = 0.0
         elif idx == 1: #3M0
             self.ssid = '3M0'
             self.port = 2001
+            self.home_az = 180
+            self.home_el = 90.0
         elif idx == 2: #4M5
             self.ssid = '4M5'
             self.port = 2002
@@ -167,68 +377,6 @@ class MainWindow(QtGui.QMainWindow):
             self.uid_tb.setEnabled(True)
             self.session_button.setEnabled(False)
 
-    def session_button_event(self):
-        #USer is attempting to start a tracking session
-        #is the daemon in a STANDBY State?
-        if self.daemon_state == 'STANDBY':
-            print self.utc_ts() + "Requesting Session START"
-            self.callback.set_session_start(self)
-            #self.session_button.setText('Stop')
-        elif self.daemon_state == 'ACTIVE':
-            print self.utc_ts() + "Requesting Session STOP"
-            self.callback.set_session_stop(self)
-            #self.session_button.setText('Start')
-
-            #daemon is in ACTIVE mode, send stop message
-
-    def query_button_event(self):
-        print self.utc_ts() + "Sending MANAGEMENT QUERY"
-        self.callback.get_daemon_state(self)
-        #need to change above to expect returned value
-        #valid = self.callback.get_daemon_state(self)
-        #if valid == True:
-            
-        if self.daemon_state == 'ACTIVE':
-            print self.utc_ts() + "Sending MOTION QUERY"
-            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback()
-
-            if valid != -1:
-                self.cur_az = az
-                self.cur_el = el
-                self.cur_az_rate = az_rate
-                self.cur_el_rate = el_rate
-                self.update_current_angles()
-            else:
-                self.autoQuery_cb.setCheckState(QtCore.Qt.Unchecked)
-     
-    def update_current_angles(self):
-        self.az_compass.set_cur_az(self.cur_az)
-        self.az_lcd_fr.set_cur(self.cur_az)
-        self.az_lcd_fr.set_rate(self.cur_az_rate)
-        
-
-        self.el_compass.set_cur_el(self.cur_el)
-        self.el_lcd_fr.set_cur(self.cur_el)
-        self.el_lcd_fr.set_rate(self.cur_el_rate)
-
-    def stop_button_event(self):
-        pass
-
-    def home_button_event(self):
-        pass
-
-    def update_button_event(self):
-        pass
-
-    def auto_query_cb_event(self, state):
-        CheckState = (state == QtCore.Qt.Checked)
-        if CheckState == True:  
-            #self.updateTimer.start()
-            print self.utc_ts() + "Started Auto Update, Interval: " + str(self.update_rate) + " [ms]"
-        else:
-            #self.updateTimer.stop()
-            print self.utc_ts() + "Stopped Auto Update"
-
     def set_daemon_state(self, state):
         self.daemon_state = state
         self.daemon_state_lbl.setText(state)
@@ -244,6 +392,22 @@ class MainWindow(QtGui.QMainWindow):
             self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(0,255,0);}")
             self.session_button.setText('Stop')
             self.ctrl_fr.setEnabled(True)
+
+    def session_button_event(self):
+        #USer is attempting to start a tracking session
+        #is the daemon in a STANDBY State?
+        if self.daemon_state == 'STANDBY':
+            print self.utc_ts() + "Requesting Session START"
+            self.callback.set_session_start()
+            #self.session_button.setText('Stop')
+        elif self.daemon_state == 'ACTIVE':
+            print self.utc_ts() + "Requesting Session STOP"
+            self.callback.set_session_stop()
+
+    #**** END CONNECTION FRAME CONTROL FUNCTIONS *****
+    #
+    #
+    ##### USER INTERFACE CONTROL SETUP #####
 
     def init_connect_frame(self):
         uid_lbl = QtGui.QLabel("User ID:")
@@ -407,24 +571,24 @@ class MainWindow(QtGui.QMainWindow):
         self.ctrl_fr.setLayout(vbox)
 
     def init_predict_frame(self):
-        self.ipAddrTextBox = QtGui.QLineEdit()
-        self.ipAddrTextBox.setText('127.000.000.001')
-        self.ipAddrTextBox.setInputMask("000.000.000.000;")
-        self.ipAddrTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.ipAddrTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.ipAddrTextBox.setMaxLength(15)
-        self.ipAddrTextBox.setFixedHeight(20)
+        self.gpredict_ip_le = QtGui.QLineEdit()
+        self.gpredict_ip_le.setText(self.pred_ip)
+        self.gpredict_ip_le.setInputMask("000.000.000.000;")
+        self.gpredict_ip_le.setEchoMode(QtGui.QLineEdit.Normal)
+        self.gpredict_ip_le.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        self.gpredict_ip_le.setMaxLength(15)
+        self.gpredict_ip_le.setFixedHeight(20)
 
-        self.portTextBox = QtGui.QLineEdit()
-        self.portTextBox.setText('4533')
+        self.gpredict_port_le = QtGui.QLineEdit()
+        self.gpredict_port_le.setText(str(self.pred_port))
         self.port_validator = QtGui.QIntValidator()
         self.port_validator.setRange(0,65535)
-        self.portTextBox.setValidator(self.port_validator)
-        self.portTextBox.setEchoMode(QtGui.QLineEdit.Normal)
-        self.portTextBox.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
-        self.portTextBox.setMaxLength(5)
-        self.portTextBox.setFixedWidth(50)
-        self.portTextBox.setFixedHeight(20)
+        self.gpredict_port_le.setValidator(self.port_validator)
+        self.gpredict_port_le.setEchoMode(QtGui.QLineEdit.Normal)
+        self.gpredict_port_le.setStyleSheet("QLineEdit {background-color:rgb(255,255,255); color:rgb(0,0,0);}")
+        self.gpredict_port_le.setMaxLength(5)
+        self.gpredict_port_le.setFixedWidth(50)
+        self.gpredict_port_le.setFixedHeight(20)
 
         label = QtGui.QLabel('Status:')
         label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
@@ -436,8 +600,8 @@ class MainWindow(QtGui.QMainWindow):
         self.pred_status_lbl.setFixedWidth(125)
         self.pred_status_lbl.setFixedHeight(10)
 
-        self.predictButton = QtGui.QPushButton("Start Predict Server")
-        self.predictButton.setFixedHeight(20)
+        self.predict_button = QtGui.QPushButton("Start Predict Server")
+        self.predict_button.setFixedHeight(20)
 
         lbl1 = QtGui.QLabel('Az:')
         lbl1.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
@@ -463,13 +627,13 @@ class MainWindow(QtGui.QMainWindow):
         self.pred_el_lbl.setFixedWidth(50)
         self.pred_el_lbl.setFixedHeight(10)
 
-        self.autoTrack_cb = QtGui.QCheckBox("Auto Track")  
-        self.autoTrack_cb.setStyleSheet("QCheckBox { background-color:rgb(0,0,0); color:rgb(255,255,255); }")
-        self.autoTrack_cb.setFixedHeight(20)
+        self.auto_track_cb = QtGui.QCheckBox("Auto Track")  
+        self.auto_track_cb.setStyleSheet("QCheckBox { background-color:rgb(0,0,0); color:rgb(255,255,255); }")
+        self.auto_track_cb.setFixedHeight(20)
 
         hbox1 = QtGui.QHBoxLayout()
-        hbox1.addWidget(self.ipAddrTextBox)
-        hbox1.addWidget(self.portTextBox)
+        hbox1.addWidget(self.gpredict_ip_le)
+        hbox1.addWidget(self.gpredict_port_le)
 
         hbox2 = QtGui.QHBoxLayout()
         hbox2.addWidget(label)
@@ -488,12 +652,12 @@ class MainWindow(QtGui.QMainWindow):
         vbox1.addLayout(hbox4)
 
         hbox5 = QtGui.QHBoxLayout()
-        hbox5.addWidget(self.autoTrack_cb)
+        hbox5.addWidget(self.auto_track_cb)
         hbox5.addLayout(vbox1)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox1)
-        vbox.addWidget(self.predictButton)
+        vbox.addWidget(self.predict_button)
         vbox.addLayout(hbox2)
         vbox.addLayout(hbox5)
 

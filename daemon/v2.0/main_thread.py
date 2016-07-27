@@ -81,7 +81,8 @@ class MainThread(threading.Thread):
                 self.md01_thr.set_stop()
                 self.set_state_standby()
         elif frame.cmd == 'QUERY':  #initiate User Session
-            print '{:s}User \'{:s}\' requested session QUERY'.format(self.utc_ts(), frame.uid)
+            pass
+            #print '{:s}User \'{:s}\' requested session QUERY'.format(self.utc_ts(), frame.uid)
 
         parent.send_management_feedback(self.state)
 
@@ -100,7 +101,8 @@ class MainThread(threading.Thread):
                 self.md01_thr.set_stop()
                 #parent.send_motion_feedback(self.state)
             elif frame.cmd == 'GET':  #QUERY ANTENNA POSITION
-                print '{:s}User \'{:s}\' requested MOTION GET'.format(self.utc_ts(), frame.uid)
+                pass
+                #print '{:s}User \'{:s}\' requested MOTION GET'.format(self.utc_ts(), frame.uid)
                 #MD01 query
             az, el, az_rate, el_rate = self.get_motion_state()
             parent.send_motion_feedback(az, el, az_rate, el_rate)

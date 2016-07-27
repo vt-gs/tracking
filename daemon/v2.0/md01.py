@@ -127,6 +127,7 @@ class md01(object):
         else:
             try:
                 self.sock.send(self.set_cmd) 
+                print '{:s}Sent \'SET\' command to MD01: AZ={:3.1f}, EL={:3.1f}'.format(self.utc_ts(), self.cmd_az, self.cmd_el)
             except socket.error as msg:
                 #print "Exception Thrown: " + str(msg)
                 #print "Closing socket, Terminating program...."
