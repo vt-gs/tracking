@@ -93,15 +93,18 @@ class vtp(object):
             print self.utc_ts() + "Connection to Tracking Daemon Successful"
             time.sleep(0.05) 
             self.get_daemon_state(True)
+            self.connected = True
             return True
         except socket.error as msg:
             print self.utc_ts() + "Exception Thrown: " + str(msg)
             print self.utc_ts() + "Failed to connect to Daemon" 
+            self.connected = False
             return False
 
     def disconnect(self):
         print self.utc_ts() + "Disconnecting from Tracking Daemon" 
         self.sock.close()
+        self.connected = False
         return False
 
     def set_ssid(self, ssid):
