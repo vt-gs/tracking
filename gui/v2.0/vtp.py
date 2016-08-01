@@ -92,7 +92,7 @@ class vtp(object):
             self.sock.connect((ip,port))
             print self.utc_ts() + "Connection to Tracking Daemon Successful"
             time.sleep(0.05) 
-            self.get_daemon_state(True)
+            #self.get_daemon_state(True)
             self.connected = True
             return True
         except socket.error as msg:
@@ -137,12 +137,15 @@ class vtp(object):
                 self.sock.send(msg)
                 self.feedback, addr = self.sock.recvfrom(1024)   
                 self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
+                self.connected = True
             except socket.error as msg:
                 print self.utc_ts() + "VTP | Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
                 print self.utc_ts() + "VTP | Failed to receive feedback during Set Stop..."
+                self.connected = False
                 #continue
                 #self.sock.close()
                 #sys.exit()
+        return self.connected
         #return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
 
@@ -163,14 +166,16 @@ class vtp(object):
                 self.sock.send(msg)
                 self.feedback, addr = self.sock.recvfrom(1024)   
                 self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
-                return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+                self.connected = True
             except socket.error as msg:
                 print self.utc_ts() + "Exception Thrown: " + str(msg)
                 print self.utc_ts() + "Failed to receive feedback during Set Position..."
+                print self.utc_ts() + "Setting connection state to False..."
+                self.connected = False
                 #continue
                 #self.sock.close()
                 #sys.exit()
-            return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+            return self.connected, self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
     def verify_set_angles(self, cmd_az, cmd_el):
         #make sure cmd_az in range -180 to +540
@@ -192,11 +197,14 @@ class vtp(object):
             self.sock.send(msg)
             self.feedback, addr = self.sock.recvfrom(1024)   
             self.mot_fb_frame.valid = self.validate_motion_feedback(self.feedback)
+            self.connected = True
         except socket.error as msg:
             print self.utc_ts() + "Exception Thrown: " + str(msg)
             print self.utc_ts() + "Failed to receive feedback during \'get_motion_feedback\'"
+            print self.utc_ts() + "Setting connection state to False..."
+            self.connected = False
 
-        return self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
+        return self.connected, self.mot_fb_frame.valid, self.mot_fb_frame.az, self.mot_fb_frame.el, self.mot_fb_frame.az_rate, self.mot_fb_frame.el_rate
 
     def validate_motion_feedback(self, feedback):
         fields = feedback.strip().split(",")
@@ -260,10 +268,13 @@ class vtp(object):
             self.sock.send(msg)
             self.feedback, addr = self.sock.recvfrom(1024)   
             self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+            self.connected = True
         except socket.error as msg:
             print self.utc_ts() + "Exception Thrown: " + str(msg)
             print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
-        return self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
+            print self.utc_ts() + "Setting connection state to False..."
+            self.connected = False
+        return self.connected, self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
 
     def set_session_start(self):
         msg = ""

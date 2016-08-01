@@ -36,7 +36,8 @@ if __name__ == '__main__':
     h_md01_port = "Set MD01 Port [default=%default]"
     h_az_thresh = "Set Azimuth Threshold [default=%default]"
     h_el_thresh = "Set Elevation Threshold [default=%default]"
-    h_ssid      = "Set Sub-System ID [default ssid=%default]"
+    h_ssid      = "Set Sub-System ID [default=%default]"
+    h_poll_rate = "Set MD-01 Poll Rate in seconds [default=%default]"
     
     parser.add_option("", "--serv_ip"  , dest="serv_ip"  , type="string", default="127.0.0.1"    , help=h_serv_ip)
     parser.add_option("", "--serv_port", dest="serv_port", type="int"   , default="2000"         , help=h_serv_port)
@@ -45,6 +46,7 @@ if __name__ == '__main__':
     parser.add_option("", "--az_thresh", dest="az_thresh", type="float" , default="4.0"          , help=h_az_thresh)
     parser.add_option("", "--el_thresh", dest="el_thresh", type="float" , default="4.0"          , help=h_el_thresh)
     parser.add_option("", "--ssid"     , dest="ssid"     , type="string", default="VUL"          , help=h_ssid)
+    parser.add_option("", "--poll_rate", dest="poll_rate", type="float" , default="0.25"         , help=h_poll_rate)
 
     (options, args) = parser.parse_args()
     #--------END Command Line option parser------------------------------------------------------    
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     time.sleep(0.1)
 
     #Start MD01 Thread
-    md01_thread = MD01Thread(options.ssid, options.md01_ip, options.md01_port, options.az_thresh, options.el_thresh)
+    md01_thread = MD01Thread(options.ssid, options.md01_ip, options.md01_port, options.poll_rate, options.az_thresh, options.el_thresh)
     md01_thread.daemon = True
     md01_thread.start() #non-blocking
 

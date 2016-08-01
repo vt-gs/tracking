@@ -238,11 +238,11 @@ class MainWindow(QtGui.QMainWindow):
     def auto_query_timeout(self):
         #print self.utc_ts() + "Sending MANAGEMENT QUERY"
         if self.connected == True:
-            valid, state = self.callback.get_daemon_state(False)
+            self.connected, valid, state = self.callback.get_daemon_state(False)
             if valid == True: self.set_daemon_state(state)
         if self.daemon_state == 'ACTIVE':
             #print self.utc_ts() + "Sending MOTION QUERY"
-            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(False)
+            self.connected, valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(False)
             if valid == True:
                 self.cur_az = az
                 self.cur_el = el

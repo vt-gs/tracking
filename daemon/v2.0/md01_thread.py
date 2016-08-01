@@ -27,13 +27,14 @@ import inspect
 from md01 import *
 
 class MD01Thread(threading.Thread):
-    def __init__ (self, ssid,ip, port, az_thresh=2.0, el_thresh=2.0):
+    def __init__ (self, ssid,ip, port, poll_rate, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
         #self.parent = parent
         self._stop      = threading.Event()
-        self.ssid   = ssid
-        self.md01   = md01(ip, port)
-        self.connected = False
+        self.ssid       = ssid
+        self.md01       = md01(ip, port)
+        self.poll_rate  = poll_rate #[s]
+        self.connected  = False
 
         self.callback = None # callback to Daemon Main Thread
 
@@ -68,6 +69,7 @@ class MD01Thread(threading.Thread):
         print self.utc_ts() + self.ssid + " MD01 Thread Started..."
         print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
         print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
+        print self.utc_ts() + "MD-01 Poll Rate [s]: " + str(self.poll_rate)
         last = None
         now = None
         while (not self._stop.isSet()):
@@ -125,17 +127,18 @@ class MD01Thread(threading.Thread):
                                         elif (self.el_rate > 0) and (self.tar_el < self.cur_el): opposite_flag = True
                                         if opposite_flag: #Set command in opposite direction of motion
                                             print self.utc_ts()+"Set Command position opposite direction of motion"
-                                            self.md01.set_stop() #Stop the rotation
+                                            self.connected, self.cur_az, self.cur_el = self.md01.set_stop() #Stop the rotation
                                             self.set_flag = True #try to resend set command next time around the loop
                                         else: #Set command is in the direction of rotation
                                             print self.utc_ts()+"Set Command position is in direction of motion"
-                                            self.md01.set_position(self.tar_az, self.tar_el)
+                                            #Set Position command does not get a feedback response from MD-01   
+                                            self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
                                     else: #Antenna is stopped
                                         print self.utc_ts()+"Antenna is Stopped, sending SET command to MD01"
-                                        self.md01.set_position(self.tar_az, self.tar_el)
-                                    #ignoring feedback buffers, could result in corrupted feedback?
-                        #print "MD01 THREAD IS RUNNING"
-                        time.sleep(0.25)
+                                        #Set Position command does not get a feedback response from MD-01   
+                                        self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
+
+                        time.sleep(self.poll_rate)
             except:
                 print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
                 self.connected = False

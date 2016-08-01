@@ -54,7 +54,6 @@ class md01(object):
         #connect to md01 controller
         self.sock       = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
         self.sock.settimeout(self.timeout)   #set socket timeout
-        #print self.getTimeStampGMT() + 'MD01 |  Attempting to connect to MD01 Controller: ' + str(self.ip) + ' ' + str(self.port)
         try:
             self.sock.connect((self.ip, self.port))
             time.sleep(0.1)
@@ -63,9 +62,8 @@ class md01(object):
             #upon connection, get status to determine current antenna position
             #self.get_status()
         except socket.error as msg:
-            #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            #print "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
-            #self.sock.shutdown(socket.SHUT_RDWR)
+            print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+            print self.utc_ts() + "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
             self.sock.close()
             self.connected = False
             return self.connected
@@ -86,15 +84,19 @@ class md01(object):
             return self.connected,0,0 #return -1 bad status, 0 for az, 0 for el
         else:
             try:
-                self.sock.send(self.status_cmd) 
-                self.feedback = self.recv_data()          
+                self.sock.send(self.status_cmd)
+                #print self.utc_ts() + 'Sent \'GET\' command to MD01'
+                self.feedback = self.recv_data()
+                self.convert_feedback()
             except socket.error as msg:
                 #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
                 #print "Closing socket, Terminating program...."
+                print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                print self.utc_ts() + "Closing socket, Terminating program...."
                 self.sock.close()
+                self.cur_az = 0
+                self.cur_el = 0
                 self.connected = False
-                return self.connected, self.cur_az, self.cur_el
-            self.convert_feedback()  
             return self.connected, self.cur_az, self.cur_el #return 0 good status, feedback az/el 
 
     def set_stop(self):
@@ -106,14 +108,17 @@ class md01(object):
             try:
                 self.sock.send(self.stop_cmd) 
                 print self.utc_ts() + 'Sent \'STOP\' command to MD01'
-                self.feedback = self.recv_data()          
+                self.feedback = self.recv_data()  
+                self.convert_feedback()        
             except socket.error as msg:
                 #print "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
                 #print "Closing socket, Terminating program...."
+                print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                print self.utc_ts() + "Closing socket, Terminating program...."
                 self.sock.close()
+                self.cur_az = 0
+                self.cur_el = 0
                 self.connected = False
-                return self.connected, self.cur_az, self.cur_el
-            self.convert_feedback()
             return self.connected, self.cur_az, self.cur_el  #return 0 good status, feedback az/el 
 
     def set_position(self, az, el):
@@ -123,28 +128,37 @@ class md01(object):
         self.format_set_cmd()
         if self.connected == False:
             #self.printNotConnected('Set Position')
-            return self.connected
+            return self.connected, 0, 0
         else:
             try:
                 self.sock.send(self.set_cmd) 
                 print '{:s}Sent \'SET\' command to MD01: AZ={:3.1f}, EL={:3.1f}'.format(self.utc_ts(), self.cmd_az, self.cmd_el)
+                #Set Position command does not get a feedback response from MD-01   
             except socket.error as msg:
                 #print "Exception Thrown: " + str(msg)
                 #print "Closing socket, Terminating program...."
+                print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+                print self.utc_ts() + "Closing socket, Terminating program...."
                 self.sock.close()
                 self.connected = False
-                return self.connected
+            return self.connected, self.cur_az, self.cur_el
 
     def recv_data(self):
         #receive socket data
         feedback = ''
-        while True:
+        while True: #cycle through recv buffer
             c = self.sock.recv(1)
-            if hexlify(c) == '20':
+            if hexlify(c) == '57': # Start Flag detected
                 feedback += c
+                flag = True
+                while flag: #continue cycling through receive buffer
+                    c = self.sock.recv(1)
+                    if hexlify(c) == '20':
+                        feedback += c
+                        flag = False
+                    else:
+                        feedback += c
                 break
-            else:
-                feedback += c
         #print hexlify(feedback)
         return feedback
 
