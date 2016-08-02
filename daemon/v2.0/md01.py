@@ -62,8 +62,8 @@ class md01(object):
             #upon connection, get status to determine current antenna position
             #self.get_status()
         except socket.error as msg:
-            print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            print self.utc_ts() + "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
+            #print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
+            #print self.utc_ts() + "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
             self.sock.close()
             self.connected = False
             return self.connected

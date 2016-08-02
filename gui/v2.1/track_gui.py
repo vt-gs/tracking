@@ -52,7 +52,7 @@ class MainWindow(QtGui.QMainWindow):
         #self.setFocus()
 
     def init_variables(self):
-        self.connected = False #TCP/IP Connection to Daemon
+        self.connected = False      #TCP/IP Connection to Daemon
         self.daemon_state = 'IDLE'
 
         self.cur_az = 0
@@ -102,8 +102,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def init_timers(self):
         self.update_timer = QtCore.QTimer(self)
-        #self.updateTimer.setInterval(self.update_rate)
-        self.update_timer.start(self.update_rate)
+        self.update_timer.setInterval(self.update_rate)
+        #self.update_timer.start(self.update_rate)
 
         #Timer used to Poll the GPredict Server thread for updates
         self.predict_timer = QtCore.QTimer(self)
@@ -218,40 +218,50 @@ class MainWindow(QtGui.QMainWindow):
     #
     ##### ANTENNA CONTROL GET FUNCTIONS #####
     # Functions that QUERY the Daemon State and Position and update GUI displays
+
     def query_button_event(self):
         print self.utc_ts() + "Sending MANAGEMENT QUERY"
-        valid, state = self.callback.get_daemon_state(True)
-        if valid == True: self.set_daemon_state(state)
-        #if valid == True:
+        if self.connected == True:
+            self.connected, valid, state = self.callback.get_daemon_state(True)
             
-        if self.daemon_state == 'ACTIVE':
-            print self.utc_ts() + "Sending MOTION QUERY"
-            valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(True)
-            if valid == True:
-                self.cur_az = az
-                self.cur_el = el
-                self.cur_az_rate = az_rate
-                self.cur_el_rate = el_rate
-                self.update_current_angles()
-            else:
-                self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+        if self.connected == True:
+            if valid == True:  self.set_daemon_state(state)
+            if self.daemon_state == 'ACTIVE':
+                print self.utc_ts() + "Sending MOTION QUERY"
+                self.connected, valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(True)
+                if valid == True:
+                    self.cur_az = az
+                    self.cur_el = el
+                    self.cur_az_rate = az_rate
+                    self.cur_el_rate = el_rate
+                    self.update_current_angles()
+                else:
+                    self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+        elif self.connected == False:
+            self.update_connection_state()
 
     def auto_query_timeout(self):
         #print self.utc_ts() + "Sending MANAGEMENT QUERY"
+        #this function is called when update_timer timesout.
+        #update_timer is dormant if not connected
         if self.connected == True:
             self.connected, valid, state = self.callback.get_daemon_state(False)
-            if valid == True: self.set_daemon_state(state)
-        if self.daemon_state == 'ACTIVE':
-            #print self.utc_ts() + "Sending MOTION QUERY"
-            self.connected, valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(False)
-            if valid == True:
-                self.cur_az = az
-                self.cur_el = el
-                self.cur_az_rate = az_rate
-                self.cur_el_rate = el_rate
-                self.update_current_angles()
-            else:
-                self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+            
+        if self.connected == True:
+            if valid == True:  self.set_daemon_state(state)
+            if self.daemon_state == 'ACTIVE':
+                #print self.utc_ts() + "Sending MOTION QUERY"
+                self.connected, valid, az, el, az_rate, el_rate = self.callback.get_motion_feedback(False)
+                if valid == True:
+                    self.cur_az = az
+                    self.cur_el = el
+                    self.cur_az_rate = az_rate
+                    self.cur_el_rate = el_rate
+                    self.update_current_angles()
+                else:
+                    self.auto_query_cb.setCheckState(QtCore.Qt.Unchecked)
+        elif self.connected == False:
+            self.update_connection_state()
 
     def update_current_angles(self):
         self.az_compass.set_cur_az(self.cur_az)
@@ -359,7 +369,9 @@ class MainWindow(QtGui.QMainWindow):
             print self.utc_ts() + "Disconnecting from Daemon..."
             self.connected = self.callback.disconnect()
             self.set_daemon_state('IDLE')
+        self.update_connection_state()
 
+    def update_connection_state(self):
         if self.connected == True:
             self.connect_button.setText('Disconnect')
             self.conn_status_lbl.setText('CONNECTED')
@@ -370,6 +382,7 @@ class MainWindow(QtGui.QMainWindow):
             self.ssid_combo.setEnabled(False)
             self.uid_tb.setEnabled(False)
             self.session_button.setEnabled(True)
+            self.update_timer.start()
         elif self.connected == False:
             self.connect_button.setText('Connect')
             self.conn_status_lbl.setText('DISCONNECTED')
@@ -377,6 +390,8 @@ class MainWindow(QtGui.QMainWindow):
             self.ssid_combo.setEnabled(True)
             self.uid_tb.setEnabled(True)
             self.session_button.setEnabled(False)
+            self.set_daemon_state('IDLE')
+            self.update_timer.stop()
 
     def set_daemon_state(self, state):
         self.daemon_state = state

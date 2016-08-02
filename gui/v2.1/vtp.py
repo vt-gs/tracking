@@ -75,7 +75,7 @@ class vtp(object):
         self.mgmt_fb_frame = ManagementFrame()  #Feedback Management Frame
         self.mot_fb_frame  = MotionFrame()      #Feedback Motion Frame
 
-        self.tx_mgmt_frame = ManagementFrame(self.uid, self.ssid)
+        self.tx_mgmt_frame = ManagementFrame(self.uid, self.ssid, 'MGMT')
         self.tx_mot_frame  = MotionFrame(self.uid, self.ssid)
         #self.tx_frame   = vtp_frame(ssid) #Transmit Frame to send to Tracking Daemon
 
@@ -272,24 +272,34 @@ class vtp(object):
     #
     #
     ##### MANAGEMENT FRAME FUNCTIONS #####
-    def get_daemon_state(self, verbosity):
-        msg = ""
-        msg += self.uid + ','
-        msg += self.ssid + ','
-        msg += 'MGMT,'
-        msg += 'QUERY'
-        try:        
-            if verbosity: print self.utc_ts() + "Sent Message: " + msg
-            self.sock.send(msg)
-            self.feedback, addr = self.sock.recvfrom(1024)   
-            self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
-            self.connected = True
-        except socket.error as msg:
-            print self.utc_ts() + "Exception Thrown: " + str(msg)
-            print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
-            print self.utc_ts() + "Setting connection state to False..."
-            self.connected = False
-        return self.connected, self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
+    def get_daemon_state(self, verbosity=False):
+        #msg = ""
+        #msg += self.uid + ','
+        #msg += self.ssid + ','
+        #msg += 'MGMT,'
+        #msg += 'QUERY'
+        #self.tx_mgmt_frame.type = 'MGMT'
+        self.tx_mgmt_frame.cmd = 'QUERY'
+        if self.connected == True:
+            try:        
+                msg = "{},{},{},{}".format(   self.tx_mgmt_frame.uid, \
+                                                    self.tx_mgmt_frame.ssid, \
+                                                    self.tx_mgmt_frame.type, \
+                                                    self.tx_mgmt_frame.cmd)  
+                if verbosity: print self.utc_ts() + "Sent Message: " + msg
+                self.sock.send(msg)
+                self.feedback, addr = self.sock.recvfrom(1024)   
+                self.mgmt_fb_frame.valid = self.validate_management_feedback(self.feedback)
+                self.connected = True
+            except socket.error as msg:
+                print self.utc_ts() + "Exception Thrown: " + str(msg)
+                print self.utc_ts() + "Failed to receive feedback during \'get_daemon_state\'"
+                print self.utc_ts() + "Setting connection state to False..."
+                self.connected = False
+            return self.connected, self.mgmt_fb_frame.valid, self.mgmt_fb_frame.cmd
+        else:
+            if verbosity: print self.utc_ts() + "Not Connected to Daemon..."
+            return self.connected, 'INVALID', 'NONE'
 
     def set_session_start(self):
         msg = ""
