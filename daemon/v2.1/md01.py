@@ -44,9 +44,6 @@ class md01(object):
         for x in [0x57,0,0,0,0,0,0,0,0,0,0,0x1F,0x20]: self.status_cmd.append(x)
         for x in [0x57,0,0,0,0,0x0a,0,0,0,0,0x0a,0x2F,0x20]: self.set_cmd.append(x) #PH=PV=0x0a, 0x0a = 10, BIG-RAS/HR is 10 pulses per degree
 
-    #def getTimeStampGMT(self):
-    #    return str(date.utcnow()) + " GMT | "
-
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | md01 | "
 
@@ -59,11 +56,7 @@ class md01(object):
             time.sleep(0.1)
             self.connected = True
             return self.connected
-            #upon connection, get status to determine current antenna position
-            #self.get_status()
         except socket.error as msg:
-            #print self.utc_ts() + "Exception Thrown: " + str(msg) + " (" + str(self.timeout) + "s)"
-            #print self.utc_ts() + "Unable to connect to MD01 at IP: " + str(self.ip) + ", Port: " + str(self.port)  
             self.sock.close()
             self.connected = False
             return self.connected

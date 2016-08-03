@@ -150,6 +150,10 @@ class MainThread(threading.Thread):
         self.state = 'ACTIVE'
         self.print_state()
 
+    def set_state_fault(self):
+        self.state = 'FAULT'
+        pass
+
     def print_state(self):
         print self.utc_ts() + "Connection Status (USER/MD01): " + str(self.user_con) + '/' + str(self.md01_con)
         print self.utc_ts() + self.ssid + " Daemon State: " + str(self.state)

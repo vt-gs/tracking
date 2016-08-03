@@ -36,7 +36,7 @@ class MD01Thread(threading.Thread):
         self.poll_rate  = poll_rate #[s]
         self.connected  = False
 
-        self.callback = None # callback to Daemon Main Thread
+        self.callback   = None # callback to Daemon Main Thread
 
         self.cur_az     = 0.0
         self.cur_el     = 0.0
@@ -46,8 +46,8 @@ class MD01Thread(threading.Thread):
         self.last_el    = 0.0
         self.last_time  = None
 
-        self.az_rate   = 0.0
-        self.el_rate   = 0.0
+        self.az_rate    = 0.0
+        self.el_rate    = 0.0
         self.time_delta = 0.0
         self.az_thresh  = az_thresh     #Azimuth Speed threshold, for error detection, deg/s
         self.el_thresh  = el_thresh     #Elevation Speed threshold, for error detection, deg/s
@@ -55,16 +55,110 @@ class MD01Thread(threading.Thread):
         self.tar_az     = 180.0
         self.tar_el     = 0.0
 
-        self.set_flag = False
+        self.set_flag   = False
 
-        self.az_motion      = False #indicates azimuth motion
-        self.el_motion      = False #indicates Elevation motion
-        self.az_motion_fault  = False #indicates antenna motion fault.
-        self.el_motion_fault  = False #indicates antenna motion fault.
-        self.thread_fault   = False #indicates unknown failure in thread
-        self.thread_dormant = False
+        self.az_motion          = False #indicates azimuth motion
+        self.el_motion          = False #indicates Elevation motion
+        self.az_motion_fault    = False #indicates antenna motion fault.
+        self.el_motion_fault    = False #indicates antenna motion fault.
+        self.motion_stop_sent   = False #indicates a stop command has been sent to the MD-01
+
+        self.thread_fault       = False #indicates unknown failure in thread
+        self.thread_dormant     = False
     
     def run(self):
+        #time.sleep(1)  #Give parent thread time to spool up
+        print self.utc_ts() + self.ssid + " MD01 Thread Started..."
+        print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
+        print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
+        print self.utc_ts() + "MD-01 Poll Rate [s]: " + str(self.poll_rate)
+        while (not self._stop.isSet()):
+            try:
+                if self.connected == False: 
+                    self.connected = self.md01.connect()
+                    if self.connected == True:
+                        print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
+                        self.last_time = date.utcnow()
+                        self.connected, self.last_az, self.last_el = self.md01.get_status()
+                        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
+                        self.set_flag = False
+                        time.sleep(1)
+                    else:
+                        time.sleep(5) #try to reconnect to MD01 every 5 seconds.
+                elif self.connected == True:
+                    feedback_valid = self.get_md01_feedback()
+                    if feedback_valid:
+                        if self.set_flag == True:  #Need to issue a set command to MD01
+                            self.set_flag = False  #reset set flag
+                            #Do current angles match target angles?
+                            if ((round(self.cur_az,1) != round(self.tar_az,1)) or (round(self.cur_el,1) != round(self.tar_el,1))):
+                                #is antenna in motion?
+                                if ((self.az_motion) or (self.el_motion)): #Antenna Is in motion
+                                    if self.motion_stop_sent == True: #A Stop command has been issued to the MD01
+                                        self.set_flag = True #reset motion flag
+                                    else:
+                                        opposite_flag = False #indicates set command opposed to direction of motion.
+                                        if (self.az_rate < 0) and (self.tar_az > self.cur_az): opposite_flag = True 
+                                        elif (self.az_rate > 0) and (self.tar_az < self.cur_az): opposite_flag = True
+                                        if (self.el_rate < 0) and (self.tar_el > self.cur_el): opposite_flag = True 
+                                        elif (self.el_rate > 0) and (self.tar_el < self.cur_el): opposite_flag = True
+                                        if opposite_flag: #Set command in opposite direction of motion
+                                            print self.utc_ts()+"Set Command position opposite direction of motion"
+                                            print self.utc_ts()+"Sending Stop Command to MD-01"
+                                            self.connected, self.cur_az, self.cur_el = self.md01.set_stop() #Stop the rotation
+                                            self.set_flag = True #try to resend set command next time around the loop
+                                            self.motion_stop_sent = True
+                                        else: #Set command is in the direction of rotation
+                                            print self.utc_ts()+"Set Command position is in direction of motion"
+                                            #Set Position command does not get a feedback response from MD-01   
+                                            self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
+                                else: #Antenna is stopped
+                                    print self.utc_ts()+"Antenna is Stopped, sending SET command to MD01"
+                                    #Set Position command does not get a feedback response from MD-01   
+                                    self.motion_stop_sent = False
+                                    self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
+                    time.sleep(self.poll_rate)
+            except:
+                print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
+                self.connected = False
+                self.thread_fault = True
+
+        print self.utc_ts() + self.ssid + " Thread is now Dormant"
+        self.thread_dormant = True
+        while 1:
+            time.sleep(10)
+
+    def get_md01_feedback(self):
+        self.cur_time = date.utcnow()
+        self.connected, self.cur_az, self.cur_el = self.md01.get_status()
+        if self.connected == False:
+            print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
+            self.callback.set_md01_con_status(self.connected) #notify main thread of disconnection
+            self.set_flag = False
+            return False #indicates problem with getting feedback
+        else:
+            self.time_delta = (self.cur_time - self.last_time).total_seconds()
+            self.az_rate = (self.cur_az - self.last_az) / self.time_delta
+            self.el_rate = (self.cur_el - self.last_el) / self.time_delta
+            
+            if abs(self.az_rate) > 0: self.az_motion = True
+            else: self.az_motion = False
+
+            if abs(self.el_rate) > 0: self.el_motion = True
+            else: self.el_motion = False
+
+            if abs(self.az_rate) > self.az_thresh: self.az_motion_fault = True
+            if abs(self.el_rate) > self.el_thresh: self.el_motion_fault = True
+
+            if ((self.az_motion_fault == True) or (self.el_motion_fault)): 
+                self.Antenna_Motion_Fault()
+            else:
+                self.last_az = self.cur_az
+                self.last_el = self.cur_el
+                self.last_time = self.cur_time
+                return True
+
+    def run_old(self):
         #time.sleep(1)  #Give parent thread time to spool up
         print self.utc_ts() + self.ssid + " MD01 Thread Started..."
         print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
