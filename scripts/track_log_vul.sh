@@ -4,7 +4,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 #DATETIME=`date +%Y%m%d`
 DATE=`date -u --date="5 minutes ago" +%Y%m%d`
 DMN_NAME=$DATE'_tracking_vul.log' #upstart daemon
-TAR_NAME=$DATE'_tracking_logs'
+TAR_NAME=$DATE'_tracking_vul_logs'
 #echo $FILENAME
 
 #create temp folder 
