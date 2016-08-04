@@ -360,6 +360,7 @@ class MainWindow(QtGui.QMainWindow):
         print self.utc_ts() + "Updated Subsystem ID: " + self.ssid
         print self.utc_ts() + "Updated Daemon port number: " + str(self.port)
         self.callback.set_ssid(self.ssid)
+        self.callback.set_port(self.port)
 
     def connect_button_event(self):
         if self.connected == False:

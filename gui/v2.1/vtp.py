@@ -89,7 +89,7 @@ class vtp(object):
         self.sock.settimeout(self.timeout)
         try:
             print self.utc_ts() + "Attempting to connect to Tracking Daemon" 
-            self.sock.connect((ip,port))
+            self.sock.connect((self.ip,self.port))
             print self.utc_ts() + "Connection to Tracking Daemon Successful"
             time.sleep(0.05) 
             #self.get_daemon_state(True)
@@ -120,6 +120,12 @@ class vtp(object):
         self.uid = uid
         self.tx_mgmt_frame.uid = uid
         self.tx_mot_frame.uid = uid
+
+    def set_port(self, port):
+        self.port = port
+
+    def set_ip(self, ip):
+        self.ip = ip
 
     def utc_ts(self):
         return str(date.utcnow()) + " UTC | VTP | "
