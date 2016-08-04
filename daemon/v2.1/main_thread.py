@@ -38,6 +38,10 @@ class MainThread(threading.Thread):
         self.user_con = False
         self.md01_con = False
 
+        self.log_flag   = False #trigger logging start/stop
+        self.log_active = False #indicates whether logging is active
+        self.filename   = ""
+
         self.md01_thr = md01_thr
         self.serv_thr = serv_thr
 
@@ -69,7 +73,7 @@ class MainThread(threading.Thread):
         self.user_con = con
         self.check_con_status()
     
-    def management_frame_received(self, parent, frame):
+    def management_frame_received(self, parent, frame, ts):
         #Called from server thread when management frame received
         if frame.cmd == 'START':  #initiate User Session
             print '{:s}User \'{:s}\' requested session START'.format(self.utc_ts(), frame.uid)
@@ -86,7 +90,7 @@ class MainThread(threading.Thread):
 
         parent.send_management_feedback(self.state)
 
-    def motion_frame_received(self, parent, frame):
+    def motion_frame_received(self, parent, frame, ts):
         #Called from server thread when motion frame received
         if self.state == 'ACTIVE': #Motion commands only processed when daemon is ACTIVE
             self.active_watchdog = 0 #reset watchdog timer
@@ -117,7 +121,16 @@ class MainThread(threading.Thread):
         #Sets user connection status
         self.md01_con = con
         self.check_con_status()
-        
+
+    ### LOGGING FUNCTIONS ###
+    def start_logging(self):
+        ts = date.utcnow().strftime('%Y%m%d_%H%M%S')
+        self.serv_thr.start_logging(ts)
+        self.md01_thr.start_logging(ts)
+
+    def stop_logging(self):
+        self.serv_thr.stop_logging()
+        self.md01_thr.stop_logging()
 
     #### FUNCTIONS CALLED LOCALLY ####
     def check_con_status(self):
@@ -138,20 +151,25 @@ class MainThread(threading.Thread):
 
     def set_state_idle(self):
         self.state = 'IDLE'
+        self.stop_logging()
         self.print_state()        
         
     def set_state_standby(self):
         self.state = 'STANDBY'
+        self.stop_logging()
         self.print_state()
 
     def set_state_active(self, user):
+        self.start_logging()
         self.active_user = user
         self.active_watchdog = 0
         self.state = 'ACTIVE'
         self.print_state()
 
     def set_state_fault(self):
+        self.stop_logging()
         self.state = 'FAULT'
+        self.print_state()
         pass
 
     def print_state(self):
@@ -162,7 +180,6 @@ class MainThread(threading.Thread):
         return str(date.utcnow()) + " UTC | MAIN | "
 
     def stop(self):
-        self.gps_ser.close()
         self._stop.set()
         sys.quit()
 

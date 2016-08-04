@@ -67,7 +67,7 @@ class md01(object):
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
         self.connected = False
-        #print self.getTimeStampGMT() + "MD01 |  Successfully disconnected from MD01 Controller"
+        print self.utc_ts() + "Disconnected from MD01"
         return self.connected
     
     def get_status(self):

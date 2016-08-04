@@ -408,6 +408,10 @@ class MainWindow(QtGui.QMainWindow):
             self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(0,255,0);}")
             self.session_button.setText('Stop')
             self.ctrl_fr.setEnabled(True)
+        elif self.daemon_state == 'FAULT':
+            self.daemon_state_lbl.setStyleSheet("QLabel {font-weight:bold; color:rgb(255,0,0);}")
+            self.session_button.setText('Stop')
+            self.ctrl_fr.setEnabled(True)
 
     def session_button_event(self):
         #USer is attempting to start a tracking session

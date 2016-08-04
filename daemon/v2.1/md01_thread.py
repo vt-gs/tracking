@@ -29,7 +29,6 @@ from md01 import *
 class MD01Thread(threading.Thread):
     def __init__ (self, ssid,ip, port, poll_rate, az_thresh=2.0, el_thresh=2.0):
         threading.Thread.__init__(self)
-        #self.parent = parent
         self._stop      = threading.Event()
         self.ssid       = ssid
         self.md01       = md01(ip, port)
@@ -56,11 +55,13 @@ class MD01Thread(threading.Thread):
         self.tar_el     = 0.0
 
         self.set_flag   = False
+        self.log_flag   = False
+        self.log_file   = ""
 
         self.az_motion          = False #indicates azimuth motion
         self.el_motion          = False #indicates Elevation motion
-        self.az_motion_fault    = False #indicates antenna motion fault.
-        self.el_motion_fault    = False #indicates antenna motion fault.
+        self.az_thresh_fault    = False #indicates antenna motion fault.
+        self.el_thresh_fault    = False #indicates antenna motion fault.
         self.motion_stop_sent   = False #indicates a stop command has been sent to the MD-01
 
         self.thread_fault       = False #indicates unknown failure in thread
@@ -123,7 +124,7 @@ class MD01Thread(threading.Thread):
                 self.connected = False
                 self.thread_fault = True
 
-        print self.utc_ts() + self.ssid + " Thread is now Dormant"
+        print self.utc_ts() + "--- DAEMON IS NOW DORMANT ---"
         self.thread_dormant = True
         while 1:
             time.sleep(10)
@@ -146,115 +147,35 @@ class MD01Thread(threading.Thread):
 
             if abs(self.el_rate) > 0: self.el_motion = True
             else: self.el_motion = False
+            
+            if self.log_flag: self.update_log()
 
-            if abs(self.az_rate) > self.az_thresh: self.az_motion_fault = True
-            if abs(self.el_rate) > self.el_thresh: self.el_motion_fault = True
+            if abs(self.az_rate) > self.az_thresh: self.az_thresh_fault = True
+            if abs(self.el_rate) > self.el_thresh: self.el_thresh_fault = True
 
-            if ((self.az_motion_fault == True) or (self.el_motion_fault)): 
-                self.Antenna_Motion_Fault()
+            if ((self.az_thresh_fault == True) or (self.el_thresh_fault)): 
+                self.Antenna_Threshold_Fault()
             else:
                 self.last_az = self.cur_az
                 self.last_el = self.cur_el
                 self.last_time = self.cur_time
                 return True
 
-    def run_old(self):
-        #time.sleep(1)  #Give parent thread time to spool up
-        print self.utc_ts() + self.ssid + " MD01 Thread Started..."
-        print self.utc_ts() + "  Azimuth Threshold: " + str(self.az_thresh)
-        print self.utc_ts() + "Elevation Threshold: " + str(self.el_thresh)
-        print self.utc_ts() + "MD-01 Poll Rate [s]: " + str(self.poll_rate)
-        last = None
-        now = None
-        while (not self._stop.isSet()):
-            try:
-                if self.connected == False: 
-                    self.connected = self.md01.connect()
-                    #time.sleep(5)
-                    if self.connected == True:
-                        print self.utc_ts() + "Connected to " + self.ssid + " MD01 Controller"
-                        self.last_time = date.utcnow()
-                        self.connected, self.last_az, self.last_el = self.md01.get_status()
-                        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
-                        self.set_flag = False
-                        time.sleep(1)
-                    else:
-                        time.sleep(5)
-                elif self.connected == True:
-                    self.cur_time = date.utcnow()
-                    self.connected, self.cur_az, self.cur_el = self.md01.get_status()
-                    if self.connected == False:
-                        print self.utc_ts() + "Disconnected from " + self.ssid + " MD01 Controller"
-                        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
-                        self.set_flag = False
-                    else:
-                        self.time_delta = (self.cur_time - self.last_time).total_seconds()
-                        self.az_rate = (self.cur_az - self.last_az) / self.time_delta
-                        self.el_rate = (self.cur_el - self.last_el) / self.time_delta
-                        
-                        if abs(self.az_rate) > 0: self.az_motion = True
-                        else: self.az_motion = False
-
-                        if abs(self.el_rate) > 0: self.el_motion = True
-                        else: self.el_motion = False
-
-                        if abs(self.az_rate) > self.az_thresh: self.az_motion_fault = True
-                        if abs(self.el_rate) > self.el_thresh: self.el_motion_fault = True
-
-                        if ((self.az_motion_fault == True) or (self.el_motion_fault)): 
-                            self.Antenna_Motion_Fault()
-                        else:
-                            self.last_az = self.cur_az
-                            self.last_el = self.cur_el
-                            self.last_time = self.cur_time
-                            
-                            if self.set_flag == True:  #Need to issue a set command to MD01?
-                                self.set_flag = False
-                                #Do current angles match target angles?
-                                if ((round(self.cur_az,1) != round(self.tar_az,1)) or (round(self.cur_el,1) != round(self.tar_el,1))):
-                                    #is antenna in motion?
-                                    if ((self.az_motion) or (self.el_motion)): #Antenna Is in motion
-                                        opposite_flag = False #indicates set command opposed to direction of motion.
-                                        if (self.az_rate < 0) and (self.tar_az > self.cur_az): opposite_flag = True 
-                                        elif (self.az_rate > 0) and (self.tar_az < self.cur_az): opposite_flag = True
-                                        if (self.el_rate < 0) and (self.tar_el > self.cur_el): opposite_flag = True 
-                                        elif (self.el_rate > 0) and (self.tar_el < self.cur_el): opposite_flag = True
-                                        if opposite_flag: #Set command in opposite direction of motion
-                                            print self.utc_ts()+"Set Command position opposite direction of motion"
-                                            self.connected, self.cur_az, self.cur_el = self.md01.set_stop() #Stop the rotation
-                                            self.set_flag = True #try to resend set command next time around the loop
-                                        else: #Set command is in the direction of rotation
-                                            print self.utc_ts()+"Set Command position is in direction of motion"
-                                            #Set Position command does not get a feedback response from MD-01   
-                                            self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
-                                    else: #Antenna is stopped
-                                        print self.utc_ts()+"Antenna is Stopped, sending SET command to MD01"
-                                        #Set Position command does not get a feedback response from MD-01   
-                                        self.connected, self.cur_az, self.cur_el = self.md01.set_position(self.tar_az, self.tar_el)
-
-                        time.sleep(self.poll_rate)
-            except:
-                print self.utc_ts() + "Unexpected error in thread:", self.ssid,'\n', sys.exc_info() # substitute logging
-                self.connected = False
-                self.thread_fault = True
-
-        print self.utc_ts() + self.ssid + " Thread is now Dormant"
-        self.thread_dormant = True
-        while 1:
-            time.sleep(10)
-
-    def Antenna_Motion_Fault(self):
-        print self.utc_ts() + "----ERROR! ERROR! ERROR!----"
-        if self.az_motion_fault == True:
-            print self.utc_ts() + "Antenna Azimuth Motion Fault in " + str(self.ssid) + " Thread"
-            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.az_rate, self.az_thresh))
-        if self.el_motion_fault == True:
-            print self.utc_ts() + "Antenna Elevation Motion Fault in " + str(self.ssid) + " Thread"
-            print self.utc_ts() + ("Rotation Rate: %+2.3f [deg/s] exceeded threshold: %2.3f [deg/s]" % (self.el_rate, self.el_thresh))            
-        print self.utc_ts() + ("cur_az: %+3.2f, cur_el: %+3.2f, last_az: %+3.2f, last_el: %+3.2f, time_delta: %+3.1f [ms]" % \
-                              (self.cur_az, self.cur_el, self.last_az, self.last_el, self.time_delta*1000))
-        print self.utc_ts() + "Killing Thread Now..."
+    def Antenna_Threshold_Fault(self):
+        cur_time_stamp = str(self.cur_time) + " UTC | MD01 | "
+        print cur_time_stamp + "----ERROR! ERROR! ERROR!----"
+        if self.az_thresh_fault == True:
+            print cur_time_stamp + "Antenna Azimuth Motion Fault"
+            print "{:s}Rotation Rate: {:2.3f} [deg/s] exceeded threshold {:2.3f} [deg/s]".format(cur_time_stamp, self.az_rate, self.az_thresh)
+        if self.el_thresh_fault == True:
+            print cur_time_stamp + "Antenna Elevation Motion Fault"
+            print "{:s}Rotation Rate: {:2.3f} [deg/s] exceeded threshold {:2.3f} [deg/s]".format(cur_time_stamp, self.el_rate, self.el_thresh)         
+        print "{:s}cur_az: {:+3.1f}, last_az: {:+3.1f}".format(cur_time_stamp, self.cur_az, self.last_az)
+        print "{:s}cur_el: {:+3.1f}, last_el: {:+3.1f}, time_delta: {:+3.1f} [ms]".format(cur_time_stamp, self.cur_el, self.last_el, self.time_delta*1000)
+        print self.utc_ts() + "--- Killing Thread Now... ---"
+        #self.callback.set_state_fault()
         self.stop_thread()
+        self.callback.set_state_fault()
 
     def get_position(self):
         return self.cur_az, self.cur_el
@@ -264,6 +185,29 @@ class MD01Thread(threading.Thread):
 
     def get_connected(self):
         return self.connected
+
+    def start_logging(self, ts):
+        self.log_flag = True
+        self.log_file = "./log/"+ ts + "_" + self.ssid + "_MD01.log"
+        self.log_f = open(self.log_file, 'a')
+        msg = "Timestamp [UTC],Azimuth [deg],Elevation [deg],Azimuth Rate [deg/sec],Elevation Rate [deg/sec]\n"
+        self.log_f.write(msg)
+        self.log_f.close()
+        print self.utc_ts() + 'Started Logging: ' + self.log_file
+
+    def stop_logging(self):
+        if self.log_flag == True:
+            self.log_flag = False
+            print self.utc_ts() + 'Stopped Logging: ' + self.log_file
+
+    def update_log(self):
+        self.log_f = open(self.log_file, 'a')
+        msg = '{:s},{:3.1f},{:3.1f},{:1.3f},{:1.3f}\n'.format(str(self.cur_time),self.cur_az,self.cur_el,self.az_rate,self.el_rate)
+        self.log_f.write(msg)
+        self.log_f.close()
+
+    def log_data(self):
+        pass
 
     def set_position(self, az, el):
         self.tar_az = az
@@ -285,6 +229,7 @@ class MD01Thread(threading.Thread):
     def stop_thread(self):
         self.md01.set_stop()
         self.connected = self.md01.disconnect()
+        self.callback.set_md01_con_status(self.connected) #notify main thread of connection
         self._stop.set()
 
     def stopped(self):

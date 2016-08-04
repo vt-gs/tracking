@@ -64,12 +64,9 @@ class ServerThread(threading.Thread):
         self.valid      = 0     # 0=invalid, 1=Management Frame, 2=Antenna Frame
 
         self.callback = None # callback to Daemon Main Thread
-        self.log_file = None #Path to server command log
 
-        self.init_thread()
-
-    def init_thread(self):
-        pass
+        self.log_flag = False
+        self.log_file = "" #Path to server command log
 
     def run(self):
         print self.utc_ts() + self.ssid + " Server Thread Started..."
@@ -84,6 +81,8 @@ class ServerThread(threading.Thread):
                     self.set_user_con_status(True)
                 elif self.user_con == True:
                     data = self.conn.recvfrom(1024)[0]
+                    ts = date.utcnow()
+                    if self.log_flag: self.update_log(data,ts)
                     if data:
                         data = data.strip()
                         #print self.utc_ts() + "User Message: " + str(data)
@@ -91,9 +90,9 @@ class ServerThread(threading.Thread):
                         if self.check_frame(data): #True if fully validated frame
                             #Valid FRAME with all checks complete at this point
                             if self.frame.type == 'MOT': #Process Motion Frame
-                                self.process_motion()
+                                self.process_motion(ts)
                             elif self.frame.type == 'MGMT': #Process Management Frame
-                                self.process_management()
+                                self.process_management(ts)
                         else:
                             self.conn.sendall('INVALID,' + data + '\n')
                     else:
@@ -123,17 +122,33 @@ class ServerThread(threading.Thread):
         msg += '{:3.1f},{:3.1f},{:1.3f},{:1.3f}\n'.format(az,el,az_rate,el_rate)
         self.conn.sendall(msg)
 
+    def start_logging(self, ts):
+        self.log_flag = True
+        self.log_file = "./log/"+ ts + "_" + self.ssid + "_VTP.log"
+        self.log_f = open(self.log_file, 'a')
+        msg = "Timestamp [UTC],Received Message\n"
+        self.log_f.write(msg)
+        self.log_f.close()
+        
+        print self.utc_ts() + 'Started Logging: ' + self.log_file
+
+    def stop_logging(self):
+        if self.log_flag == True:
+            self.log_flag = False
+            print self.utc_ts() + 'Stopped Logging: ' + self.log_file
+
+
     #### MAIN THREAD FUNCTION CALLS ####
     def set_user_con_status(self, status):
         #sets user connection status
         self.user_con = status
         self.callback.set_user_con_status(self.user_con)
 
-    def process_motion(self):
-        self.callback.motion_frame_received(self, self.frame)
+    def process_motion(self, ts):
+        self.callback.motion_frame_received(self, self.frame, ts)
 
-    def process_management(self):
-        self.callback.management_frame_received(self, self.frame)
+    def process_management(self, ts):
+        self.callback.management_frame_received(self, self.frame, ts)
 
     def set_callback(self, callback):
         #callback function leads to main thread.
@@ -141,6 +156,14 @@ class ServerThread(threading.Thread):
 
 
     #### LOCAL FUNCTION CALLS ####
+    def update_log(self, data, ts):
+        self.log_f = open(self.log_file, 'a')
+        msg = str(ts) + ','
+        msg += data
+        msg += '\n'
+        self.log_f.write(msg)
+        self.log_f.close()
+
     def check_frame(self, data):
         #validates header field of received frame.
         uid     = None

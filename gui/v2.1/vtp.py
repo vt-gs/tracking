@@ -200,12 +200,10 @@ class vtp(object):
         self.tx_mot_frame.cmd = "GET"
         if self.connected == True:
             try:
-                msg = "{},{},{},{},{},{}".format(   self.tx_mot_frame.uid, \
+                msg = "{},{},{},{}".format(   self.tx_mot_frame.uid, \
                                                     self.tx_mot_frame.ssid, \
                                                     self.tx_mot_frame.type, \
-                                                    self.tx_mot_frame.cmd, \
-                                                    self.tx_mot_frame.az, \
-                                                    self.tx_mot_frame.el)     
+                                                    self.tx_mot_frame.cmd)    
                 if verbosity: print self.utc_ts() + "Sent Message: " + msg
                 self.sock.send(msg)
                 self.feedback, addr = self.sock.recvfrom(1024)   
