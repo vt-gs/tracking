@@ -15,12 +15,18 @@ mkdir $TAR_NAME
 cd /var/log/upstart
 cp tracking_vul.log /vtgs/scripts/$TAR_NAME/$DMN_NAME
 
-#move all MD01 and VTP logs to scripts folder
+#move all MD01 and VTP logs to scripts folderi
 cd /vtgs/daemon/tracking/vul/log
-mv *.log /vtgs/scripts/$TAR_NAME/
+files=$(shopt -s nullglob dotglob; echo ./*)
+if (( ${#files} ))
+then
+  mv *.log /vtgs/scripts/$TAR_NAME/
+fi
+
+#mv *.log /vtgs/scripts/$TAR_NAME/
 
 #compress the folder full of logs and ove it to the NAS
 cd /vtgs/scripts/
-tar -zcpf /mnt/log/tracking/$TAR_NAME'.tar.gz'  *.log
+tar -zcpf /mnt/log/tracking/$TAR_NAME'.tar.gz' ./$TAR_NAME
 chmod 666 /mnt/log/tracking/$TAR_NAME'.tar.gz'
 rm -rf ./$TAR_NAME
