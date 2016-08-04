@@ -26,7 +26,10 @@ fi
 #mv *.log /vtgs/scripts/$TAR_NAME/
 
 #compress the folder full of logs and ove it to the NAS
+#cd /vtgs/scripts/$TAR_NAME
 cd /vtgs/scripts/
-tar -zcpf /mnt/log/tracking/$TAR_NAME'.tar.gz' ./$TAR_NAME
+#tar -zcf /mnt/log/tracking/$TAR_NAME'.tar.gz' .
+#cd ..
+tar -zcf /mnt/log/tracking/$TAR_NAME'.tar.gz' $TAR_NAME
 chmod 666 /mnt/log/tracking/$TAR_NAME'.tar.gz'
 rm -rf ./$TAR_NAME
