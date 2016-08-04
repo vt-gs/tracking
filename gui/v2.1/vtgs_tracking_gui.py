@@ -53,8 +53,6 @@ if __name__ == '__main__':
     if options.port != None:
         port = options.port
 
-    print port
-
     track = vtp(options.ip, port, options.uid, options.ssid, 2.0)
 
     app = QtGui.QApplication(sys.argv)
