@@ -35,7 +35,7 @@ class MainWindow(QtGui.QMainWindow):
         #self.setMaximumWidth(900)
         self.setMinimumHeight(425)
         #self.setMaximumHeight(700)
-        self.setWindowTitle('VTGS Tracking GUI v2.0')
+        self.setWindowTitle('VTGS Tracking GUI v2.1')
         #self.setContentsMargins(0,0,0,0)
         self.main_window = main_widget()
         self.setCentralWidget(self.main_window)
