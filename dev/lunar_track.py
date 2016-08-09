@@ -82,6 +82,10 @@ if __name__ == '__main__':
         print "Time [UTC]: {:s}".format(str(d))
         print "   Azimuth: {:3.1f}".format(dms_to_dec(m.az))
         print " Elevation: {:3.1f}".format(dms_to_dec(m.alt))
+        if options.flag == 0:
+            print "Libration Lat: {:+3.6f}".format(dms_to_dec(m.libration_lat))
+            print "Libration Lon: {:+3.6f}".format(dms_to_dec(m.libration_long))
+            print "  Lunar Phase: {:3.3f}%".format(m.moon_phase*100)
         time.sleep(1)
 
     
