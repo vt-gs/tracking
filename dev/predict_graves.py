@@ -105,11 +105,13 @@ if __name__ == '__main__':
     h_gs_lon    = "Ground Station Longitude [default=%default]"
     h_gs_alt    = "Ground Station Altitude [default=%default]"
     h_start     = "Simulation Start Date [default=%default]"
+    h_verb      = "Verbosity [default=%default]"
 
     parser.add_option("", "--gs_lat", dest = "gs_lat", action = "store", type = "float", default='37.229977' , help = h_gs_lat)
     parser.add_option("", "--gs_lon", dest = "gs_lon", action = "store", type = "float", default='-80.439626', help = h_gs_lon)
     parser.add_option("", "--gs_alt", dest = "gs_alt", action = "store", type = "float", default='610'       , help = h_gs_alt)
     parser.add_option("", "--start" , dest = "start" , action = "store", type = "string", default=ts         , help = h_start)
+    parser.add_option("", "--verb"  , dest = "verb"  , action = "store", type = "int"   , default='0'        , help = h_verb)
     (options, args) = parser.parse_args()
     #--------END Command Line option parser------------------------------------------------------    
 
@@ -130,11 +132,13 @@ if __name__ == '__main__':
     chain_stop  = None
     
     d = date.datetime.strptime(options.start,  "%Y-%m-%d %H:%M:%S")
+    print "Looking for Start", d
     while not chain_flag:
         gs.date = d
         m.compute(gs)
         gs_az = dms_to_dec(m.az)
         gs_el = dms_to_dec(m.alt)
+        graves.date = d
         m.compute(graves)
         graves_az = dms_to_dec(m.az)
         graves_el = dms_to_dec(m.alt)
@@ -143,6 +147,8 @@ if __name__ == '__main__':
             chain_start = d
             #break
         d = d + date.timedelta(seconds=1) #Update GS Date
+        if options.verb==1:
+            print "{:s}\t{:3.1f}\t{:3.1f}\t{:3.1f}\t{:3.1f}".format(str(d), gs_az, gs_el, graves_az, graves_el)
     print "       Chain Start: {:s}".format(chain_start.strftime("%Y-%m-%d %H:%M:%S"))
     chain_obj = chain(chain_start)
 
@@ -166,6 +172,9 @@ if __name__ == '__main__':
             chain_stop = d
             #break
         d = d + date.timedelta(seconds=1) #Update GS Date
+        if options.verb==1:
+            print "{:s}\t{:3.1f}\t{:3.1f}\t{:3.1f}\t{:3.1f}".format(str(d), gs_az, gs_el, graves_az, graves_el)
+    print "       Chain Start: {:s}".format(chain_start.strftime("%Y-%m-%d %H:%M:%S"))
     print "        Chain Stop: {:s}".format(chain_stop.strftime("%Y-%m-%d %H:%M:%S"))
     chain_obj.stop = chain_stop
     chain_obj.duration = (chain_stop - chain_start).total_seconds()
