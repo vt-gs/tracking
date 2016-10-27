@@ -58,6 +58,9 @@ if __name__ == '__main__':
     #--Setup Ground Station------------
     gs = ephem.Observer()
     gs.lat, gs.lon, gs.elevation = options.gs_lat*deg2rad, options.gs_lon*deg2rad, options.gs_alt
+    #gs.lat = ephem.degrees(options.gs_lat)
+    #gs.lon = ephem.degrees(options.gs_lon)
+    #gs.elevation = options.gs_alt
 
     #--Setup moon------------
     if options.flag == 0:
