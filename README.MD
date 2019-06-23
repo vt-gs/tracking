@@ -1,6 +1,8 @@
 # TRACKING - DEPRECATED
 
-## see:  https://github.com/vt-gs/tracking_daemon for reboot of this functionality.
+## see:  
+## * https://github.com/vt-gs/tracking_daemon for reboot of daemon.
+## * https://github.com/vt-gs/tracking_client for reboot of client.
 
 ---------------------------------------------------------------------
 
