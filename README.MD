@@ -1,5 +1,9 @@
 # TRACKING - DEPRECATED
 
+## see:  https://github.com/vt-gs/tracking_daemon for reboot of this functionality.
+
+---------------------------------------------------------------------
+
 Created by Zach Leffke
 20140701
 
